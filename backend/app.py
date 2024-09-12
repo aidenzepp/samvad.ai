@@ -1,7 +1,9 @@
 from flask import Flask, Response, jsonify, request, send_file
 from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure
 from typing import List, Dict, Optional
 from io import BytesIO
+import os
 import json
 import uuid
 import datetime
@@ -85,13 +87,20 @@ models_schema = {
 # Database
 #
 
-client = MongoClient("mongodb://localhost:27017/")
+client = MongoClient("mongodb://localhost:27017/", serverSelectionTimeoutMS=5000)
 db = client["samvad"]
 
 def startup():
         logging.info("startup: starting...")
 
+        logging.info("startup: checking for viable database connection")
+        if not connectable():
+                logging.warning("startup: database connection NOT viable")
+                logging.info("startup: attempting to start database connection")
+                os.system("brew services start mongodb-community@7.0")
+
         # Variables needed to verify database structure.
+        logging.info("startup: verifying database structure")
         existing_collection_names = db.list_collection_names()
         required_collection_pairs = {
                 "chats": chats_schema,
@@ -103,17 +112,28 @@ def startup():
         # Check for required collections; if one doesn't exist, create it.
         for collection_name, collection_schema in required_collection_pairs.items():
                 if collection_name not in existing_collection_names:
-                        logging.info(f"startup: creating collection: {collection_name}")
-                        db.create_collection(collection_name, validator={ "$jsonSchema": collection_schema })
+                        logging.info(f"startup: required collection not found, creating collection: {collection_name}")
+                        db.create_collection(collection_name, validator={"$jsonSchema": collection_schema})
 
         logging.info("startup: complete")
 
 def cleanup():
         logging.info("cleanup: starting...")
 
+        # Close the mongodb client.
         client.close()
 
+        # Stop the mongodb process.
+        os.system("brew services stop mongodb-community@7.0")
+
         logging.info("cleanup: complete")
+
+def connectable() -> bool:
+        try:
+                client.server_info()
+                return True
+        except ConnectionFailure:
+                return False
 
 def run():
         logging.info("run: starting...")
