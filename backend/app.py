@@ -135,22 +135,22 @@ def connectable() -> bool:
         except ConnectionFailure:
                 return False
 
-def run():
-        logging.info("run: starting...")
+def sample():
+        logging.info("sample: starting...")
 
         if True:
-                logging.debug("run: dropping collections")
+                logging.info("sample: dropping collections")
                 for collection_name in db.list_collection_names():
                         db[collection_name].drop()
 
         if True:
-                logging.debug("run: deleting collections\' contents")
+                logging.info("sample: deleting collections\' contents")
                 for collection_name in db.list_collection_names():
                         db[collection_name].delete_many({})
 
-        logging.debug("run: printing collection names")
+        logging.info("sample: printing collection names")
         for collection_name in db.list_collection_names():
-                logging.debug(f"\tcollection name: {collection_name}")
+                logging.info(f"\tcollection name: {collection_name}")
 
         # Sample data for each collection
         chat_data = {
@@ -181,65 +181,71 @@ def run():
         }
 
         # Insert data into each collection
-        logging.debug("run: inserting example data into collections")
-        db["chats"].insert_one(chat_data)
-        db["users"].insert_one(user_data)
-        db["files"].insert_one(file_data)
-        db["models"].insert_one(model_data)
+        logging.info("sample: inserting example data into collections")
+        insert_one("chats", chat_data)
+        insert_one("files", file_data)
+        insert_one("users", user_data)
+        insert_one("models", model_data)
 
         # Print the contents of each collection
-        logging.debug("run: printing contents of \'chat\' collection")
-        for chat in db["chats"].find():
+        logging.info("sample: printing contents of \'chat\' collection")
+        for chat in select_all("chat"):
                 print(json.dumps(chat, indent=4, default=str))
 
-        logging.debug("run: printing contents of \'users\' collection")
-        for user in db["users"].find():
-                print(json.dumps(user, indent=4, default=str))
-
-        logging.debug("run: printing contents of \'files\' collection")
-        for file in db["files"].find():
+        logging.info("sample: printing contents of \'files\' collection")
+        for file in select_all("files"):
                 print(json.dumps(file, indent=4, default=str))
 
-        logging.debug("run: printing contents of \'models\' collection")
-        for model in db["models"].find():
+        logging.info("sample: printing contents of \'users\' collection")
+        for user in select_all("users"):
+                print(json.dumps(user, indent=4, default=str))
+
+        logging.info("sample: printing contents of \'models\' collection")
+        for model in select_all("models"):
                 print(json.dumps(model, indent=4, default=str))
 
-        logging.info("run: complete")
+        logging.info("sample: complete")
 
-def select_all(collection_name: str, filter: Optional[Dict] = None) -> List[Dict]:
+def select_all(collection_name: str, where: Optional[Dict] = None, filter: Optional[Dict] = None) -> List[Dict]:
         # Check if the collection exists in the database.
         if collection_names not in db.list_collection_names():
                 return []
 
+        # Ensure the `where` is set.
+        where = where or {}
+
         # Ensure the omission of the `"_id"` field.
         filter = _.defaults(filter or {}, {"_id": 0})
 
-        return list(db[collection_name].find({}, filter))
+        return list(db[collection_name].find(where, filter))
 
-def select_one(collection_name: str, id: str, filter: Optional[Dict] = None) -> Optional[Dict]:
-        return _.head(select_ids(collection_name, [id], filter=filter))
+def select_one(collection_name: str, where: Optional[Dict] = None, filter: Optional[Dict] = None) -> Optional[Dict]:
+        return _.head(select_all(collection_name, where=where, filter=filter))
 
 def select_ids(collection_name: str, ids: List[str], filter: Optional[Dict] = None) -> List[Dict]:
-        # Check if the collection exists in the database.
-        if collection_names not in db.list_collection_names():
-                return []
-
-        # Ensure the omission of the `"_id"` field.
-        filter = _.defaults(filter or {}, {"_id": 0})
-
-        return list(db[collection_name].find({"id": {"$in": ids}}, filter))
+        return select_all(collection_name, where={"id": {"$in": ids}}, filter=filter)
 
 def insert_all(collection_name: str, records: List[Dict]) -> bool:
         # Check if the collection exists in the database.
         if collection_names not in db.list_collection_names():
                 return False
 
+        # If a record doesn't contain an `"id"` field, it's not a valid schema anyways.
+        try:
+                ids = _.map_(records, lambda record: record["id"])
+        except KeyError:
+                return False
+
+        # Check if any records in the database already have the same `"id"` values.
+        if select_ids(collection_name, ids) != []:
+                return False
+
         try:
                 db[collection_name].insert_many(records)
-
-                return True
         except WriteError:
                 return False
+
+        return True
 
 
 def insert_one(collection_name: str, record: Dict) -> bool:
@@ -250,19 +256,28 @@ def update_all(collection_name: str, records: List[Dict], filters: Optional[List
         if collection_names not in db.list_collection_names():
                 return False
 
+        # If a record doesn't contain an `"id"` field, it's not a valid schema anyways.
         try:
-                zero_id = str(uuid.UUID(int=0))
-                filters = filters or _.map_(records, lambda record: {"id": record.get("id", zero_id))
+                ids = _.map_(records, lambda record: record["id"])
+        except KeyError:
+                return False
 
+        # Generate filters as records' ids, if `filters` isn't set.
+        filters = filters or _.map_(ids, lambda id: {"id": id})
+
+        try:
                 for record, filter in zip(records, filters):
                         db[collection_names].update_many(filter, {"$set": record})
-
-                return True
         except WriteError:
                 return False
 
+        return True
+
 def update_one(collection_name: str, record: Dict, filter: Optional[Dict] = None) -> bool:
-        return update_all(collection_name, [record], [filter] if filter is not None else None) 
+        # Create `filters` list if applicable.
+        filters = [filter] if filter is not None else None
+
+        return update_all(collection_name, [record], filters=filters)
 
 #
 # Server
@@ -289,6 +304,21 @@ def chats_all():
 
                 return create_err(ex), 500
 
+@server.route("/chats/<id>", methods=["GET"])
+def chats_one(id: str):
+        try:
+                chat = select_one("chats", where={"id": id})
+                if chat is not None:
+                        logging.info(f"server: GET /chats/{id}: success")
+
+                        return jsonify(chat), 200
+
+                raise Exception("chat not found")
+        except Exception as ex:
+                logging.error(f"server: GET /chats/{id}: failure")
+
+                return create_err(ex), 500
+
 @server.route("/files", methods=["GET"])
 def files_all():
         try:
@@ -301,16 +331,30 @@ def files_all():
 
                 return create_err(ex), 500
 
+@server.route("/files/<id>", methods=["GET"])
+def files_one(id: str):
+        try:
+                file = select_one("files", where={"id": id}, filter={"file_data": 0})
+                if file is not None:
+                        logging.info(f"server: GET /files/{id}: success")
+
+                        return jsonify(file), 200
+
+                raise Exception("file not found")
+        except Exception as ex:
+                logging.error(f"server: GET /files/{id}: failure")
+
+                return create_err(ex), 500
+
 @server.route("/files/<id>/download", methods=["GET"])
 def files_bin(id: str):
         try:
-                file = select_one("files", id)
-                if file != None:
+                file = select_one("files", where={"id": id})
+                if file is not None:
                         logging.info(f"server: GET /files/{id}/download: success")
-                        file_data = BytesIO(file["file_data"])
 
                         return send_file(
-                                file_data,
+                                BytesIO(file["file_data"])
                                 mimetype=file["file_type"],
                                 download_name=file["file_name"],
                                 as_attachment=False,
@@ -334,6 +378,21 @@ def users_all():
 
                 return create_err(ex), 500
 
+@server.route("/users/<id>", methods=["GET"])
+def users_one(id: str):
+        try:
+                user = select_one("users", where={"id": id})
+                if user is not None:
+                        logging.info(f"server: GET /users/{id}: success")
+
+                        return jsonify(user), 200
+
+                raise Exception("user not found")
+        except Exception as ex:
+                logging.error(f"server: GET /users/{id}: failure")
+
+                return create_err(ex), 500
+
 @server.route("/models", methods=["GET"])
 def models_all():
         try:
@@ -343,6 +402,21 @@ def models_all():
                 return jsonify(models), 200
         except Exception as ex:
                 logging.error("server: GET /models: failure")
+
+                return create_err(ex), 500
+
+@server.route("/models/<id>", methods=["GET"])
+def models_one(id: str):
+        try:
+                model = select_one("models", where={"id": id})
+                if model is not None:
+                        logging.info(f"server: GET /models/{id}: success")
+
+                        return jsonify(model), 200
+
+                raise Exception("model not found")
+        except Exception as ex:
+                logging.error(f"server: GET /models/{id}: failure")
 
                 return create_err(ex), 500
 
@@ -356,10 +430,9 @@ def main():
                 logging.error(f"main: an error occurred: {e}")
                 return
 
-        logging.info("main: running test data")
-        run()
+        logging.info("main: creating sample data")
+        sample()
 
-        # Server?...
         logging.info("main: starting server")
         server.run(debug=True)
 
