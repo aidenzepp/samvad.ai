@@ -1,6 +1,6 @@
 from flask import Flask, Response, jsonify, request, send_file
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
+from pymongo.errors import ConnectionFailure, WriteError
 from typing import List, Dict, Optional
 from io import BytesIO
 import os
@@ -8,6 +8,7 @@ import json
 import uuid
 import datetime
 import logging
+import pydash as _
 
 # Define logging:
 logging.basicConfig(
@@ -96,10 +97,9 @@ def startup():
         logging.info("startup: checking for viable database connection")
         if not connectable():
                 logging.warning("startup: database connection NOT viable")
-                logging.info("startup: attempting to start database connection")
+                logging.info("startup: attempting to make a new database connection")
                 os.system("brew services start mongodb-community@7.0")
 
-        # Variables needed to verify database structure.
         logging.info("startup: verifying database structure")
         existing_collection_names = db.list_collection_names()
         required_collection_pairs = {
@@ -138,8 +138,6 @@ def connectable() -> bool:
 def run():
         logging.info("run: starting...")
 
-        db = client["samvad"]
-
         if True:
                 logging.debug("run: dropping collections")
                 for collection_name in db.list_collection_names():
@@ -165,13 +163,11 @@ def run():
                 "updated_at": datetime.datetime.now(),
                 "updated_by": str(uuid.uuid4())
         }
-
         user_data = {
                 "id": str(uuid.uuid4()),
                 "username": "test_user",
                 "password": "hashed_password"
         }
-
         file_data = {
                 "id": str(uuid.uuid4()),
                 "file_name": "document.pdf",
@@ -179,7 +175,6 @@ def run():
                 "file_data": b"binary content of the file",
                 "languages": ["English", "Spanish"]
         }
-
         model_data = {
                 "id": str(uuid.uuid4()),
                 "model_name": "gpt-3"
@@ -211,36 +206,63 @@ def run():
 
         logging.info("run: complete")
 
-def select_all(collection_name: str, filter: Dict = {}) -> List[Dict]:
+def select_all(collection_name: str, filter: Optional[Dict] = None) -> List[Dict]:
         # Check if the collection exists in the database.
-        if collection_name not in db.list_collection_names():
+        if collection_names not in db.list_collection_names():
                 return []
 
         # Ensure the omission of the `"_id"` field.
-        filter["_id"] = 0
+        filter = _.defaults(filter or {}, {"_id": 0})
 
         return list(db[collection_name].find({}, filter))
 
-def select_one(collection_name: str, id: str, filter: Dict = {}) -> Optional[Dict]:
+def select_one(collection_name: str, id: str, filter: Optional[Dict] = None) -> Optional[Dict]:
+        return _.head(select_ids(collection_name, [id], filter=filter))
+
+def select_ids(collection_name: str, ids: List[str], filter: Optional[Dict] = None) -> List[Dict]:
         # Check if the collection exists in the database.
-        if collection_name not in db.list_collection_names():
-                return None
-
-        # Ensure the omission of the `"_id"` field.
-        filter["_id"] = 0
-
-        return db[collection_name].find_one({"id": id}, filter)
-
-
-def select_ids(collection_name: str, ids: List[str], filter: Dict = {}) -> List[Dict]:
-        # Check if the collection exists in the database.
-        if collection_name not in db.list_collection_names():
+        if collection_names not in db.list_collection_names():
                 return []
 
         # Ensure the omission of the `"_id"` field.
-        filter["_id"] = 0
+        filter = _.defaults(filter or {}, {"_id": 0})
 
         return list(db[collection_name].find({"id": {"$in": ids}}, filter))
+
+def insert_all(collection_name: str, records: List[Dict]) -> bool:
+        # Check if the collection exists in the database.
+        if collection_names not in db.list_collection_names():
+                return False
+
+        try:
+                db[collection_name].insert_many(records)
+
+                return True
+        except WriteError:
+                return False
+
+
+def insert_one(collection_name: str, record: Dict) -> bool:
+        return insert_all(collection_name, [record])
+
+def update_all(collection_name: str, records: List[Dict], filters: Optional[List[Dict]] = None) -> bool:
+        # Check if the collection exists in the database.
+        if collection_names not in db.list_collection_names():
+                return False
+
+        try:
+                zero_id = str(uuid.UUID(int=0))
+                filters = filters or _.map_(records, lambda record: {"id": record.get("id", zero_id))
+
+                for record, filter in zip(records, filters):
+                        db[collection_names].update_many(filter, {"$set": record})
+
+                return True
+        except WriteError:
+                return False
+
+def update_one(collection_name: str, record: Dict, filter: Optional[Dict] = None) -> bool:
+        return update_all(collection_name, [record], [filter] if filter is not None else None) 
 
 #
 # Server
