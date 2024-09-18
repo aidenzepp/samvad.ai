@@ -1,2 +1,7 @@
+# Root
+.DS_Store
+
 # Backend
 backend/venv
+backend/.DS_Store
+backend/__pycache__

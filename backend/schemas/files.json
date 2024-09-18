@@ -1,0 +1,15 @@
+{
+        "bsonType": "object",
+        "required": ["id", "file_name", "file_type", "file_data", "languages"],
+        "properties": {
+                "id": {"bsonType": "string", "description": "must be a UUID"},
+                "file_name": {"bsonType": "string", "description": "must be a string"},
+                "file_type": {"bsonType": "string", "description": "must be a string"},
+                "file_data": {"bsonType": "binData", "description": "must be binary file data"},
+                "languages": {
+                        "bsonType": "array",
+                        "items": {"bsonType": "string", "description": "must be strings representing languages"},
+                        "description": "List of languages detected"
+                }
+        }
+}
