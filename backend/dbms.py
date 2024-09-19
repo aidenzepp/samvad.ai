@@ -32,6 +32,7 @@ def startup():
                 _logger.warning("startup: database connection NOT viable")
                 _logger.info("startup: attempting to make a new database connection")
 
+                # Start the mongodb process.
                 system = platform.system()
                 if system == "Darwin":
                         _logger.info("startup: starting mongodb using homebrew on mac os")
@@ -57,9 +58,8 @@ def startup():
                 if collection_name in existing_collection_names:
                         continue
 
-                _logger.info(f"startup: required collection not found, creating collection: {collection_name}")
-                schema_name = f"{collection_name}.json"
-                schema_path = os.path.join("schemas", schema_name)
+                _logger.info(f"startup: required collection not found: {collection_name}")
+                schema_path = os.path.join("schemas", f"{collection_name}.json")
                
                 try:
                         _logger.info(f"startup: searching for collection schema file: {schema_name}")
