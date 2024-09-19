@@ -224,35 +224,25 @@ def insert_all(collection_name: str, records: List[Dict]) -> bool:
 def insert_one(collection_name: str, record: Dict) -> bool:
         return insert_all(collection_name, [record])
 
-def update_all(collection_name: str, records: List[Dict], filters: Optional[List[Dict]] = None) -> bool:
+def update_all(collection_name: str, ids: List[str], updates: List[Dict]) -> bool:
         # Check if the collection exists in the database.
         if collection_name not in _samvad.list_collection_names():
-                return False
-
-        # If a record doesn't contain an `"id"` field, it's not a valid schema anyways.
-        try:
-                ids = _.map_(records, lambda record: record["id"])
-        except KeyError:
                 return False
 
         # Check if all the associated records can be found.
         if len(select_ids(collection_name, ids)) != len(ids):
                 return False
 
-        # Generate filters as records' ids, if `filters` isn't set.
-        filters = filters or _.map_(ids, lambda id: {"id": id})
+        # Generate filters as records' ids.
+        filters = _.map_(ids, lambda id: {"id": id})
 
         try:
-                for record, filter in zip(records, filters):
-                        _samvad[collection_name].update_many(filter, {"$set": record})
+                for update, filter in zip(updates, filters):
+                        _samvad[collection_name].update_many(filter, update)
         except WriteError:
                 return False
 
         return True
 
-def update_one(collection_name: str, record: Dict, filter: Optional[Dict] = None) -> bool:
-        # Create `filters` list if applicable.
-        filters = [filter] if filter is not None else None
-
-        return update_all(collection_name, [record], filters=filters)
-
+def update_one(collection_name: str, id: str, update: Dict) -> bool:
+        return update_all(collection_name, [id], [update])
