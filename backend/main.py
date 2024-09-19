@@ -31,7 +31,7 @@ def main():
         dbms.sample()
 
         _logger.info("main: starting server")
-        api.server.run(debug=True)
+        api.startup()
 
         _logger.info("main: cleaning database")
         dbms.cleanup()

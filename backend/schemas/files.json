@@ -1,6 +1,6 @@
 {
         "bsonType": "object",
-        "required": ["id", "file_name", "file_type", "languages"],
+        "required": ["id", "file_name", "file_type", "file_from", "file_data", "file_text", "languages"],
         "properties": {
                 "id": {"bsonType": "string", "description": "must be a UUID"},
                 "file_name": {"bsonType": "string", "description": "must be a string"},
@@ -11,7 +11,7 @@
                 "languages": {
                         "bsonType": "array",
                         "items": {"bsonType": "string", "description": "must be strings representing languages"},
-                        "description": "List of languages detected"
+                        "description": "list of languages detected"
                 }
         }
 }

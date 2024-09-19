@@ -14,11 +14,18 @@ import dbms
 #
 
 _logger = logging.getLogger(__name__)
-server = flask.Flask(__name__)
+_server = flask.Flask(__name__)
 
 #
 # Functions
 #
+
+def startup(bool debug = True):
+        _logger.info("server: starting...")
+
+        _server.run(debug=debug)
+
+        _logger.info("server: startup complete")
 
 def create_err(ex: Exception) -> flask.Response:
         return flask.jsonify({"error": str(ex)})
@@ -73,11 +80,11 @@ def chats_one(id: str):
 
         if flask.request.method == "PUT":
                 try:
-                        request_json = flask.request.get_json()
-                        if "id" not in request_json or request_json["id"] != id:
+                        json_data = flask.request.get_json()
+                        if json_data.get("id", "") != id:
                                 raise Exception("mismatched ids")
 
-                        ok = dbms.update_one("chats", request_json)
+                        ok = dbms.update_one("chats", json_data)
                         if not ok:
                                 raise Exception("unable to update chat")
 
@@ -93,7 +100,7 @@ def chats_one(id: str):
 def files_all():
         if flask.request.method == "GET":
                 try:
-                        files = dbms.select_all("files", filter={"file_data": 0})
+                        files = dbms.select_all("files", filter={"file_data": 0, "file_text": 0})
 
                         _logger.info("server: GET /files: success")
 
@@ -105,11 +112,30 @@ def files_all():
 
         if flask.request.method == "POST":
                 try:
-                        request_json = flask.request.get_json()
-                        if "id" not in request_json or request_json["id"] != id:
+                        if "json" not in flask.request.form:
+                                raise Exception("expected \'json\' content, none found")
+
+                        if "file" not in flask.request.files:
+                                raise Exception("expected \'file\' content, none found")
+
+                        json_data = json.loads(flask.request.form.get("json"))
+                        if json_data.get("id", "") != id:
                                 raise Exception("mismatched ids")
 
-                        ok = dbms.insert_one("files", request_json)
+                        file_data = flask.request.files.get("file").read()
+                        if len(file_data) == 0:
+                                raise Exception("no file data")
+
+                        # TODO: Extract file text and set `"file_text"`.
+                        file_text = ""
+
+                        # If applicable, create corresponding translation document here?
+
+                        insert_data = json_data.update({
+                                "file_data": file_data,
+                                "file_text": file_text,
+                        })
+                        ok = dbms.insert_one("files", insert_data)
                         if not ok:
                                 raise Exception("unable to create file")
 
@@ -139,11 +165,14 @@ def files_one(id: str):
 
         if flask.request.method == "PUT":
                 try:
-                        request_json = flask.request.get_json()
-                        if "id" not in request_json or request_json["id"] != id:
+                        json_data = flask.request.get_json()
+                        if json_data.get("id", "") != id:
                                 raise Exception("mismatched ids")
 
-                        ok = dbms.update_one("files", request_json)
+                        update_data = {
+                                "$set": json_data,
+                        }
+                        ok = dbms.update_one("files", update_data)
                         if not ok:
                                 raise Exception("unable to update file")
 
@@ -155,7 +184,7 @@ def files_one(id: str):
 
                         return create_err(ex), 500
 
-@server.route("/files/<id>/data", methods=["GET", "PUT"])
+@server.route("/files/<id>/data", methods=["GET"])
 def files_data(id: str):
         if flask.request.method == "GET":
                 try:
@@ -163,14 +192,10 @@ def files_data(id: str):
                         if file is None:
                                 raise Exception("file not found")
 
-                        file_data = file["file_data"]
-                        if file_data is None:
-                                raise Exception("file data not found")
-
                         _logger.info(f"server: GET /files/{id}/data: success")
 
                         return flask.send_file(
-                                io.BytesIO(file_data),
+                                io.BytesIO(file["file_data"),
                                 mimetype=file["file_type"],
                                 download_name=file["file_name"],
                                 as_attachment=False,
@@ -179,42 +204,8 @@ def files_data(id: str):
                         _logger.error(f"server: GET /files/{id}/data: failure")
 
                         return create_err(ex), 500
-
-        if flask.request.method == "PUT":
-                try:
-                        request_json = flask.request.get_json()
-                        if "id" not in request_json or request_json["id"] != id:
-                                raise Exception("mismatched ids")
-
-                        if "file" not in flask.request.files:
-                                raise Exception("file data not found")
-
-                        file_data = flask.request.files["file"].read()
-                        if len(file_data) == 0:
-                                raise Exception("file data not found")
-
-                        update_data = {
-                                "$set": {"file_data": file_data},
-                                "$addToSet": {"languages": "en"},
-                        }
-                        ok = dbms.update_one("files", id, update_data)
-                        if not ok:
-                                raise Exception("unable to update file")
-
-                        # TODO: Extract the file's text and set the `"file_text"` field.
-
-                        # Translate here or somewhere else?
-
-                        _logger.info(f"server: PUT /files/{id}/data: success")
-
-                        return "", 200
-
-                except Exception as ex:
-                        _logger.error(f"server: PUT /files/{id}/data: failure")
-
-                        return create_err(ex), 500
                 
-@server.route("/files/<id>/text", methods=["GET", "POST"])
+@server.route("/files/<id>/text", methods=["GET"])
 def files_text(id: str):
         if flask.request.method == "GET":
                 try:
@@ -222,50 +213,11 @@ def files_text(id: str):
                         if file is None:
                                 raise Exception("file not found")
                         
-                        file_text = file["file_text"]
-                        if file_text is None:
-                                raise Exception("file text not found")
-
                         _logger.info(f"server: GET /files/{id}/text: success")
 
-                        return flask.jsonify({"file_text": file_text}), 200
+                        return flask.jsonify({"file_text": file["file_text"]}), 200
                 except Exception as ex:
                         _logger.error(f"server: GET /files/{id}/text: failure")
-
-                        return create_err(ex), 500
-
-        if flask.request.method == "POST":
-                try:
-                        request_json = flask.request.get_json()
-                        if "id" not in request_json or request_json["id"] != id:
-                                raise Exception("mismatched ids")
-
-                        file = dbms.select_one("files", where={"id": id})
-                        if file is None:
-                                raise Exception("file not found")
-
-                        file_data = file["file_data"]
-                        if file_data is None:
-                                raise Exception("file data not found")
-                        
-                        file_text = file["file_text"]
-                        if file_text is not None:
-                                return flask.jsonify({"file_text": file_text}), 200
-
-                        # TODO: Extract text...
-
-                        update_data = {
-                                "$set": {"file_text": file_text},
-                        }
-                        ok = dbms.update_one("files", id, update_data)
-                        if not ok:
-                                raise Exception("unable to update file")
-
-                        _logger.info(f"server: POST /files/{id}/text: success")
-
-                        return flask.jsonify({"file_text": file_text}), 200
-                except Exception as ex:
-                        _logger.error(f"server: POST /files/{id}/text: failure")
 
                         return create_err(ex), 500
 
@@ -315,11 +267,11 @@ def users_one(id: str):
 
         if flask.request.method == "PUT":
                 try:
-                        request_json = flask.request.get_json()
-                        if "id" not in request_json or request_json["id"] != id:
+                        json_data = flask.request.get_json()
+                        if json_data.get("id", "") != id:
                                 raise Exception("mismatched ids")
 
-                        ok = dbms.update_one("users", request_json)
+                        ok = dbms.update_one("users", json_data)
                         if not ok:
                                 raise Exception("unable to update user")
 
@@ -378,11 +330,11 @@ def models_one(id: str):
 
         if flask.request.method == "PUT":
                 try:
-                        request_json = flask.request.get_json()
-                        if "id" not in request_json or request_json["id"] != id:
+                        json_data = flask.request.get_json()
+                        if json_data.get("id", "") != id:
                                 raise Exception("mismatched ids")
 
-                        ok = dbms.update_one("models", request_json)
+                        ok = dbms.update_one("models", json_data)
                         if not ok:
                                 raise Exception("unable to update model")
 

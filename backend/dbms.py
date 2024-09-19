@@ -25,31 +25,31 @@ _samvad = _client["samvad"]
 #
 
 def startup():
-        _logger.info("startup: starting...")
+        _logger.info("database: starting...")
 
-        _logger.info("startup: checking for viable database connection")
+        _logger.info("database: checking for viable database connection")
         if not connectable():
-                _logger.warning("startup: database connection NOT viable")
-                _logger.info("startup: attempting to make a new database connection")
+                _logger.warning("database: database connection NOT viable")
+                _logger.info("database: attempting to make a new database connection")
 
                 # Start the mongodb process.
                 system = platform.system()
                 if system == "Darwin":
-                        _logger.info("startup: starting mongodb using homebrew on mac os")
+                        _logger.info("database: starting mongodb using homebrew on mac os")
 
                         os.system("brew services start mongodb-community@7.0")
                 elif system == "Linux":
-                        _logger.info("startup: starting mongodb on linux")
+                        _logger.info("database: starting mongodb on linux")
 
                         os.system("sudo systemctl start mongodb")
                 elif system == "Windows":
-                        _logger.info("startup: starting mongodb on windows")
+                        _logger.info("database: starting mongodb on windows")
 
                         os.system("net start MongoDB")
                 else:
                         raise Exception(f"unsupported operating system: {system}")
 
-        _logger.info("startup: verifying database structure")
+        _logger.info("database: verifying database structure")
         existing_collection_names = _samvad.list_collection_names()
         required_collection_names = ["chats", "files", "users", "models"]
 
@@ -58,25 +58,25 @@ def startup():
                 if collection_name in existing_collection_names:
                         continue
 
-                _logger.info(f"startup: required collection not found: {collection_name}")
+                _logger.info(f"database: required collection not found: {collection_name}")
                 schema_path = os.path.join("schemas", f"{collection_name}.json")
                
                 try:
-                        _logger.info(f"startup: searching for collection schema file: {schema_name}")
+                        _logger.info(f"database: searching for collection schema file: {schema_name}")
                         with open(schema_path, "r") as schema_file:
                                 collection_schema = json.load(schema_file)
                 except FileNotFoundError:
-                        _logger.error(f"startup: schema file not found for collection: {collection_name}")
+                        _logger.error(f"database: schema file not found for collection: {collection_name}")
 
                         raise Exception(f"schema file not found: {schema_path}")
                 except json.JSONDecodeError:
-                        _logger.error(f"startup: failed to parse schema file for collection: {collection_name}")
+                        _logger.error(f"database: failed to parse schema file for collection: {collection_name}")
 
                         raise Exception(f"schema file is not a valid JSON file: {schema_path}")
 
                 _samvad.create_collection(collection_name, validator={"$jsonSchema": collection_schema})
 
-        _logger.info("startup: complete")
+        _logger.info("database: complete")
 
 def cleanup():
         _logger.info("cleanup: starting...")
