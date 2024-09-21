@@ -10,6 +10,12 @@ import pydash as _
 import dbms
 
 #
+# Constants
+#
+
+DEBUG = True
+
+#
 # Variables
 #
 
@@ -20,49 +26,58 @@ _server = flask.Flask(__name__)
 # Functions
 #
 
-def startup(bool debug = True):
+def startup():
         _logger.info("server: starting...")
 
-        _server.run(debug=debug)
+        _logger.info(f"server: DEBUG={DEBUG}")
+
+        _server.run(debug=DEBUG)
 
         _logger.info("server: startup complete")
 
 def create_err(ex: Exception) -> flask.Response:
         return flask.jsonify({"error": str(ex)})
 
-@server.route("/")
+def log_success(request, **kwargs):
+        if DEBUG:
+                _logger.info(f"server: {request.method} {flask.url_for(request.endpoint, **kwargs)}: success")
+
+def log_failure(request, **kwargs):
+        if DEBUG:
+                _logger.error(f"server: {request.method} {flask.url_for(request.endpoint, **kwargs)}: failure")
+
+@_server.route("/")
 def index():
         return "Hello, World!"
 
-@server.route("/chats", methods=["GET", "POST"])
+@_server.route("/chats", methods=["GET", "POST"])
 def chats_all():
         if flask.request.method == "GET":
                 try:
                         chats = dbms.select_all("chats")
 
-                        _logger.info("server: GET /chats: success")
+                        log_success(flask.request)
 
                         return flask.jsonify(chats), 200
                 except Exception as ex:
-                        _logger.error("server: GET /chats: failure")
+                        log_failure(flask.request)
 
                         return create_err(ex), 500
-
         if flask.request.method == "POST":
                 try:
                         ok = dbms.insert_one("chats", flask.request.get_json())
                         if not ok:
                                 raise Exception("unable to create chat")
 
-                        _logger.info("server: POST /chats: success")
+                        log_success(flask.request)
 
                         return "", 200
                 except Exception as ex:
-                        _logger.error("server: POST /chats: failure")
+                        log_failure(flask.request)
 
                         return create_err(ex), 500
 
-@server.route("/chats/<id>", methods=["GET", "PUT"])
+@_server.route("/chats/<id>", methods=["GET", "PUT"])
 def chats_one(id: str):
         if flask.request.method == "GET":
                 try:
@@ -70,11 +85,11 @@ def chats_one(id: str):
                         if chat is None:
                                 raise Exception("chat not found")
 
-                        _logger.info(f"server: GET /chats/{id}: success")
+                        log_success(flask.request, id=id)
 
                         return flask.jsonify(chat), 200
                 except Exception as ex:
-                        _logger.error(f"server: GET /chats/{id}: failure")
+                        log_failure(flask.request, id=id)
 
                         return create_err(ex), 500
 
@@ -88,25 +103,25 @@ def chats_one(id: str):
                         if not ok:
                                 raise Exception("unable to update chat")
 
-                        _logger.info(f"server: PUT /chats/{id}: success")
+                        log_success(flask.request, id=id)
 
                         return "", 200
                 except Exception as ex:
-                        _logger.error(f"server: PUT /chats/{id}: failure")
+                        log_failure(flask.request, id=id)
 
                         return create_err(ex), 500
 
-@server.route("/files", methods=["GET", "POST"])
+@_server.route("/files", methods=["GET", "POST"])
 def files_all():
         if flask.request.method == "GET":
                 try:
                         files = dbms.select_all("files", filter={"file_data": 0, "file_text": 0})
 
-                        _logger.info("server: GET /files: success")
+                        log_success(flask.request)
 
                         return flask.jsonify(files), 200
                 except Exception as ex:
-                        _logger.error("server: GET /files: failure")
+                        log_failure(flask.request)
 
                         return create_err(ex), 500
 
@@ -138,15 +153,15 @@ def files_all():
                         if not ok:
                                 raise Exception("unable to create file")
 
-                        _logger.info("server: POST /files: success")
+                        log_success(flask.request)
 
                         return "", 200
                 except Exception as ex:
-                        _logger.error("server: POST /files: failure")
+                        log_failure(flask.request)
 
                         return create_err(ex), 500
 
-@server.route("/files/<id>", methods=["GET", "PUT"])
+@_server.route("/files/<id>", methods=["GET", "PUT"])
 def files_one(id: str):
         if flask.request.method == "GET":
                 try:
@@ -154,11 +169,11 @@ def files_one(id: str):
                         if file is None:
                                 raise Exception("file not found")
 
-                        _logger.info(f"server: GET /files/{id}: success")
+                        log_success(flask.request, id=id)
 
                         return flask.jsonify(file), 200
                 except Exception as ex:
-                        _logger.error(f"server: GET /files/{id}: failure")
+                        log_failure(flask.request, id=id)
 
                         return create_err(ex), 500
 
@@ -172,29 +187,29 @@ def files_one(id: str):
                         if not ok:
                                 raise Exception("unable to update file")
 
-                        _logger.info(f"server: PUT /files/{id}: success")
+                        log_success(flask.request, id=id)
 
                         return "", 200
                 except Exception as ex:
-                        _logger.error(f"server: PUT /files/{id}: failure")
+                        log_failure(flask.request, id=id)
 
                         return create_err(ex), 500
 
-@server.route("/files/<id>/translations", methods=["GET"])
+@_server.route("/files/<id>/translations", methods=["GET"])
 def files_from(id: str):
         if flask.request.method == "GET":
                 try:
                         files = dbms.select_all("files", where={"file_from": id})
 
-                        _logger.info(f"server: GET /files/{id}/from: success")
+                        log_success(flask.request, id=id)
 
                         return flask.jsonify(files), 200
                 except Exception as ex:
-                        _logger.info(f"server: GET /files/{id}/from: failure")
+                        log_success(flask.request, id=id)
 
                         return create_err(ex), 500
 
-@server.route("/files/<id>/data", methods=["GET"])
+@_server.route("/files/<id>/data", methods=["GET"])
 def files_data(id: str):
         if flask.request.method == "GET":
                 try:
@@ -202,20 +217,20 @@ def files_data(id: str):
                         if file is None:
                                 raise Exception("file not found")
 
-                        _logger.info(f"server: GET /files/{id}/data: success")
+                        log_success(flask.request, id=id)
 
                         return flask.send_file(
-                                io.BytesIO(file["file_data"),
+                                io.BytesIO(file["file_data"]),
                                 mimetype=file["file_type"],
                                 download_name=file["file_name"],
                                 as_attachment=False,
                         )
                 except Exception as ex:
-                        _logger.error(f"server: GET /files/{id}/data: failure")
+                        log_failure(flask.request, id=id)
 
                         return create_err(ex), 500
                 
-@server.route("/files/<id>/text", methods=["GET"])
+@_server.route("/files/<id>/text", methods=["GET"])
 def files_text(id: str):
         if flask.request.method == "GET":
                 try:
@@ -223,25 +238,25 @@ def files_text(id: str):
                         if file is None:
                                 raise Exception("file not found")
                         
-                        _logger.info(f"server: GET /files/{id}/text: success")
+                        log_success(flask.request, id=id)
 
                         return flask.jsonify({"file_text": file["file_text"]}), 200
                 except Exception as ex:
-                        _logger.error(f"server: GET /files/{id}/text: failure")
+                        log_failure(flask.request, id=id)
 
                         return create_err(ex), 500
 
-@server.route("/users", methods=["GET", "POST"])
+@_server.route("/users", methods=["GET", "POST"])
 def users_all():
         if flask.request.method == "GET":
                 try:
                         users = dbms.select_all("users")
 
-                        _logger.info("server: GET /users: success")
+                        log_success(flask.request)
 
                         return flask.jsonify(users), 200
                 except Exception as ex:
-                        _logger.error("server: GET /users: failure")
+                        log_failure(flask.request)
 
                         return create_err(ex), 500
 
@@ -251,15 +266,15 @@ def users_all():
                         if not ok:
                                 raise Exception("unable to create user")
 
-                        _logger.info("server: POST /users: success")
+                        log_success(flask.request)
 
                         return "", 200
                 except Exception as ex:
-                        _logger.error("server: POST /users: failure")
+                        log_failure(flask.request)
 
                         return create_err(ex), 500
 
-@server.route("/users/<id>", methods=["GET", "PUT"])
+@_server.route("/users/<id>", methods=["GET", "PUT"])
 def users_one(id: str):
         if flask.request.method == "GET":
                 try:
@@ -267,11 +282,11 @@ def users_one(id: str):
                         if user is None:
                                 raise Exception("user not found")
 
-                        _logger.info(f"server: GET /users/{id}: success")
+                        log_success(flask.request, id=id)
 
                         return flask.jsonify(user), 200
                 except Exception as ex:
-                        _logger.error(f"server: GET /users/{id}: failure")
+                        log_failure(flask.request, id=id)
 
                         return create_err(ex), 500
 
@@ -285,25 +300,25 @@ def users_one(id: str):
                         if not ok:
                                 raise Exception("unable to update user")
 
-                        _logger.info(f"server: PUT /users/{id}: success")
+                        log_success(flask.request, id=id)
 
                         return "", 200
                 except Exception as ex:
-                        _logger.error(f"server: PUT /users/{id}: failure")
+                        log_failure(flask.request, id=id)
 
                         return create_err(ex), 500
 
-@server.route("/models", methods=["GET", "POST"])
+@_server.route("/models", methods=["GET", "POST"])
 def models_all():
         if flask.request.method == "GET":
                 try:
                         models = dbms.select_all("models")
 
-                        _logger.info("server: GET /models: success")
+                        log_success(flask.request)
 
                         return flask.jsonify(models), 200
                 except Exception as ex:
-                        _logger.error("server: GET /models: failure")
+                        log_failure(flask.request)
 
                         return create_err(ex), 500
 
@@ -313,16 +328,16 @@ def models_all():
                         if not ok:
                                 raise Exception("unable to create model")
 
-                        _logger.info("server: POST /models: success")
+                        log_success(flask.request)
 
                         return "", 200
                 except Exception as ex:
-                        _logger.error("server: POST /models: failure")
+                        log_failure(flask.request)
 
                         return create_err(ex), 500
 
 
-@server.route("/models/<id>", methods=["GET", "PUT"])
+@_server.route("/models/<id>", methods=["GET", "PUT"])
 def models_one(id: str):
         if flask.request.method == "GET":
                 try:
@@ -330,11 +345,11 @@ def models_one(id: str):
                         if model is None:
                                 raise Exception("model not found")
 
-                        _logger.info(f"server: GET /models/{id}: success")
+                        log_success(flask.request, id=id)
 
                         return flask.jsonify(model), 200
                 except Exception as ex:
-                        _logger.error(f"server: GET /models/{id}: failure")
+                        log_failure(flask.request, id=id)
 
                         return create_err(ex), 500
 
@@ -348,11 +363,11 @@ def models_one(id: str):
                         if not ok:
                                 raise Exception("unable to update model")
 
-                        _logger.info(f"server: PUT /models/{id}: success")
+                        log_success(flask.request, id=id)
 
                         return "", 200
                 except Exception as ex:
-                        _logger.error(f"server: PUT /models/{id}: failure")
+                        log_failure(flask.request, id=id)
 
                         return create_err(ex), 500
 
