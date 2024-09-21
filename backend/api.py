@@ -84,7 +84,7 @@ def chats_one(id: str):
                         if json_data.get("id", "") != id:
                                 raise Exception("mismatched ids")
 
-                        ok = dbms.update_one("chats", json_data)
+                        ok = dbms.update_one("chats", id, {"$set": json_data})
                         if not ok:
                                 raise Exception("unable to update chat")
 
@@ -129,12 +129,11 @@ def files_all():
                         # TODO: Extract file text and set `"file_text"`.
                         file_text = ""
 
-                        # If applicable, create corresponding translation document here?
+                        # Create corresponding translation document here?
 
-                        insert_data = json_data.update({
-                                "file_data": file_data,
-                                "file_text": file_text,
-                        })
+                        # Join JSON data with the required file data and file text fields.
+                        insert_data = json_data | {"file_data": file_data, "file_text": file_text}
+
                         ok = dbms.insert_one("files", insert_data)
                         if not ok:
                                 raise Exception("unable to create file")
@@ -169,10 +168,7 @@ def files_one(id: str):
                         if json_data.get("id", "") != id:
                                 raise Exception("mismatched ids")
 
-                        update_data = {
-                                "$set": json_data,
-                        }
-                        ok = dbms.update_one("files", update_data)
+                        ok = dbms.update_one("files", id, {"$set": json_data})
                         if not ok:
                                 raise Exception("unable to update file")
 
@@ -181,6 +177,20 @@ def files_one(id: str):
                         return "", 200
                 except Exception as ex:
                         _logger.error(f"server: PUT /files/{id}: failure")
+
+                        return create_err(ex), 500
+
+@server.route("/files/<id>/translations", methods=["GET"])
+def files_from(id: str):
+        if flask.request.method == "GET":
+                try:
+                        files = dbms.select_all("files", where={"file_from": id})
+
+                        _logger.info(f"server: GET /files/{id}/from: success")
+
+                        return flask.jsonify(files), 200
+                except Exception as ex:
+                        _logger.info(f"server: GET /files/{id}/from: failure")
 
                         return create_err(ex), 500
 
@@ -271,7 +281,7 @@ def users_one(id: str):
                         if json_data.get("id", "") != id:
                                 raise Exception("mismatched ids")
 
-                        ok = dbms.update_one("users", json_data)
+                        ok = dbms.update_one("users", id, {"$set": json_data})
                         if not ok:
                                 raise Exception("unable to update user")
 
@@ -334,7 +344,7 @@ def models_one(id: str):
                         if json_data.get("id", "") != id:
                                 raise Exception("mismatched ids")
 
-                        ok = dbms.update_one("models", json_data)
+                        ok = dbms.update_one("models", id, {"$set": json_data})
                         if not ok:
                                 raise Exception("unable to update model")
 
