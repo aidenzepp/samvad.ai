@@ -32,7 +32,7 @@ def startup():
                 _logger.warning("database: database connection NOT viable")
                 _logger.info("database: attempting to make a new database connection")
 
-                # Start the mongodb process.
+                _logger.info("database: starting mongodb system process")
                 system = platform.system()
                 if system == "Darwin":
                         _logger.info("database: starting mongodb using homebrew on mac os")
@@ -76,15 +76,15 @@ def startup():
 
                 _samvad.create_collection(collection_name, validator={"$jsonSchema": collection_schema})
 
-        _logger.info("database: complete")
+        _logger.info("database: startup complete")
 
 def cleanup():
-        _logger.info("cleanup: starting...")
+        _logger.info("database: cleaning...")
 
-        # Close the mongodb client.
+        _logger.info("database: closing mongodb client")
         _client.close()
 
-        # Stop the mongodb process.
+        _logger.info("database: closing mongodb system process")
         system = platform.system()
         if system == "Darwin":
                 _logger.info("cleanup: stopping mongodb using homebrew on mac os")
@@ -101,7 +101,7 @@ def cleanup():
         else:
                 raise Exception(f"unsupported operating system: {system}")
 
-        _logger.info("cleanup: complete")
+        _logger.info("database: cleanup complete")
 
 def connectable() -> bool:
         try:
