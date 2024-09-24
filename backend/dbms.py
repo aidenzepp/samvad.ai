@@ -59,7 +59,8 @@ def startup():
                         continue
 
                 _logger.info(f"database: required collection not found: {collection_name}")
-                schema_path = os.path.join("schemas", f"{collection_name}.json")
+                schema_name = f"{collection_name}.json"
+                schema_path = os.path.join("schemas", schema_name)
                
                 try:
                         _logger.info(f"database: searching for collection schema file: {schema_name}")
