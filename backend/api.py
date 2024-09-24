@@ -4,7 +4,9 @@ import logging
 
 # lib:
 import flask
+from flask_cors import CORS
 import pydash as _
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # dep:
 import dbms
@@ -21,6 +23,7 @@ DEBUG = True
 
 _logger = logging.getLogger(__name__)
 _server = flask.Flask(__name__)
+CORS(_server)
 
 #
 # Functions
@@ -30,6 +33,9 @@ def startup():
         _logger.info("server: starting...")
 
         _logger.info(f"server: DEBUG={DEBUG}")
+
+        # Replace with a real secret key.
+        _server.config["SECRET_KEY"] = "FIXME: secret_key"
 
         _server.run(debug=DEBUG)
 
@@ -240,6 +246,7 @@ def files_text(id: str):
                         
                         log_success(flask.request, id=id)
 
+                        # Send file instead?
                         return flask.jsonify({"file_text": file["file_text"]}), 200
                 except Exception as ex:
                         log_failure(flask.request, id=id)
@@ -262,6 +269,16 @@ def users_all():
 
         if flask.request.method == "POST":
                 try:
+                        json_data = flask.request.get_json()
+
+                        password = json_data.get("password", "")
+                        if password == "":
+                                raise Exception("expected password, none found")
+
+                        # Store only the hash of the password. Technically, the front-end should be doing this prior 
+                        # to sending the JSON data, but for the purposes of this project it doesn't matter.
+                        json_data["password"] = generate_password_hash(password)
+
                         ok = dbms.insert_one("users", flask.request.get_json())
                         if not ok:
                                 raise Exception("unable to create user")
@@ -308,6 +325,49 @@ def users_one(id: str):
 
                         return create_err(ex), 500
 
+@_server.route("/login", methods=["POST"])
+def users_login():
+        if flask.request.method == "POST":
+                try:
+                        json_data = flask.request.get_json()
+
+                        id = json_data.get("id", "")
+                        if id == "":
+                                raise Exception("expected id, found none")
+
+                        username = json_data.get("username", "")
+                        if username == "":
+                                raise Exception("expected username, found none")
+
+                        password = json_data.get("password", "")
+                        if password == "":
+                                raise Exception("expected password, found none")
+
+                        user = dbms.select_one("users", where={"id": id})
+                        if user is None:
+                                raise Exception("user not found")
+
+                        if not check_password_hash(user["password"], password):
+                                raise Exception("invalid password")
+
+                        flask.session["username"] = username
+                        log_success(flask.request)
+
+                        return "", 200
+                except Exception as ex:
+                        log_failure(flask.request)
+
+                        return create_err(ex), 500
+
+@_server.route("/logout", methods=["POST"])
+def users_logout():
+        if flask.request.method == "POST":
+                flask.session.pop("username", None)
+
+                log_success(flask.request)
+
+                return "", 200
+                        
 @_server.route("/models", methods=["GET", "POST"])
 def models_all():
         if flask.request.method == "GET":
