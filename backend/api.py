@@ -1,15 +1,19 @@
 # std:
 import io
 import logging
+import os
 
 # lib:
 import flask
 from flask_cors import CORS
 import pydash as _
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+
 
 # dep:
 import dbms
+from ml_models.ocr_translate import extract_text_from_image, google_translate_text
 
 #
 # Constants
@@ -24,6 +28,15 @@ DEBUG = True
 _logger = logging.getLogger(__name__)
 _server = flask.Flask(__name__)
 CORS(_server)
+
+
+# *** TEMPORARY FILE UPLOAD FOR TESTING ***
+_server.config['UPLOAD_FOLDER'] = 'uploads/'
+if not os.path.exists(_server.config['UPLOAD_FOLDER']):
+    os.makedirs(_server.config['UPLOAD_FOLDER'])
+# Extraction Usage: curl -X POST -F 'file=@path/to/image.jpg' http://127.0.0.1:5000/extract_text
+# Translation Usage: curl -X POST -H "Content-Type: application/json" -d '{"text": "extracted text", "target_language": "en"}' http://127.0.0.1:5000/translate_text
+
 
 #
 # Functions
@@ -430,4 +443,46 @@ def models_one(id: str):
                         log_failure(flask.request, id=id)
 
                         return create_err(ex), 500
+                
+@_server.route("/extract_text", methods=["POST"])
+def extract_text():
+    try:
+        if 'file' not in flask.request.files:
+            return flask.jsonify({'error': 'No file part'}), 400
+
+        file = flask.request.files['file']
+
+        if file.filename == '':
+            return flask.jsonify({'error': 'No selected file'}), 400
+
+        if file:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(_server.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+
+            extracted_text = extract_text_from_image(file_path)
+
+            return flask.jsonify({'extracted_text': extracted_text}), 200
+    except Exception as ex:
+        _logger.error(f"extract_text: {ex}")
+        return create_err(ex), 500
+    
+@_server.route("/translate_text", methods=["POST"])
+def translate_text():
+    try:
+        data = flask.request.get_json()
+        if 'text' not in data or 'target_language' not in data:
+            return flask.jsonify({'error': 'Invalid input'}), 400
+
+        text = data['text']
+        target_language = data['target_language']
+
+        translated_text = google_translate_text(text, target_language)
+
+        return flask.jsonify({'translated_text': translated_text}), 200
+    except Exception as ex:
+        _logger.error(f"translate_text: {ex}")
+        return create_err(ex), 500
+
+
 

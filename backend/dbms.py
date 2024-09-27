@@ -145,8 +145,11 @@ def sample():
                 "file_name": "document.pdf",
                 "file_type": "application/pdf",
                 "file_data": b"binary content of the file",
+                "file_from": "user upload",  # Added
+                "file_text": "Extracted text from the file",  # Added
                 "languages": ["English", "Spanish"]
         }
+
         user_data = {
                 "id": str(uuid.uuid4()),
                 "username": "test_user",
