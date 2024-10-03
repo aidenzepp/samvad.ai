@@ -34,3 +34,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Root
+.DS_Store
+
+# Backend
+backend/venv
+backend/.DS_Store
+backend/__pycache__
