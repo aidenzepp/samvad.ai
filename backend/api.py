@@ -2,6 +2,8 @@
 import io
 import logging
 import os
+import sys
+import uuid 
 
 # lib:
 import flask
@@ -13,8 +15,10 @@ from werkzeug.utils import secure_filename
 
 # dep:
 import dbms
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ml_models.ocr_translate import extract_text_from_image, google_translate_text
-
+from flask import Flask, request, jsonify
+ 
 #
 # Constants
 #
@@ -24,7 +28,6 @@ DEBUG = True
 #
 # Variables
 #
-
 _logger = logging.getLogger(__name__)
 _server = flask.Flask(__name__)
 CORS(_server)
@@ -443,6 +446,35 @@ def models_one(id: str):
                         log_failure(flask.request, id=id)
 
                         return create_err(ex), 500
+                
+
+@_server.route('/register', methods=['POST'])
+def register():
+    try:
+        # Get data from request
+        data = flask.request.json
+        
+        # Generate a UUID for the new user
+        data["id"] = str(uuid.uuid4())  # Add an ID field
+        
+        # Example validation
+        if not all(k in data for k in ("id", "username", "password")):
+            return flask.jsonify({"error": "Missing required fields"}), 400
+        
+        # Insert into the database
+        success = dbms.insert_one("users", data)
+        
+        if not success:
+            return flask.jsonify({"error": "Failed to register user"}), 500
+
+        return flask.jsonify({"message": "User registered successfully"}), 201
+
+    except Exception as e:
+        _logger.error(f"Error during registration: {str(e)}")
+        return flask.jsonify({"error": "Internal server error"}), 500
+
+
+
                 
 @_server.route("/extract_text", methods=["POST"])
 def extract_text():
