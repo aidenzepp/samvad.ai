@@ -1,40 +1,50 @@
 'use client'
+
 import { usePathname } from 'next/navigation';
 import Link from "next/link"
 import { cn } from '@/lib/utils';
 import React from 'react';
+import { Logout } from './logout';
 
 export function Navbar() {
   const pathname = usePathname();
+
+  const navItemClass = 'flex items-center gap-2 rounded-lg px-3 py-2 transition-all hover:bg-gray-700 hover:text-gray-100';
+  const activeClass = 'text-gray-100 bg-gray-700';
+  const inactiveClass = 'text-gray-400';
+
   return (
-    <div className="hidden border-r bg-gray-100/40 lg:block dark:bg-gray-800/40 w-64"> {/* Changed width here */}
-      <div className="hidden lg:block h-screen border-r bg-gray-100/40 dark:bg-gray-800/40">
-        <div className="flex h-[60px] items-center border-b px-4"> {/* Reduced padding */}
-          <Link className="flex items-center gap-2 text-sm font-semibold" href="/home">
-            <BrainIcon className="h-5 w-5" /> {/* Reduced icon size */}
-            <span className="">Samvad.ai</span>
+    <div className="hidden border-r border-gray-700 bg-gray-800 lg:block w-64">
+      <div className="flex flex-col h-screen">
+        <div className="flex h-[60px] items-center border-b border-gray-700 px-4">
+          <Link className="flex items-center gap-2 text-sm font-semibold text-gray-100" href="/home">
+            <BrainIcon className="h-5 w-5" />
+            <span>Samvad.ai</span>
           </Link>
         </div>
-        <div className="flex-1 overflow-auto py-2">
-          <nav className="grid items-start px-2 text-sm font-medium">
+        <nav className="flex-1 overflow-auto py-2 flex flex-col">
+          <div>
             <Link
-              className={cn('flex items-center gap-2 rounded-lg px-3 py-2 transition-all hover:text-gray-900 dark:text-gray-50 dark:hover:text-gray-50', 
-              pathname === '/' ? 'text-gray-900 text-gray-900 dark:text-gray-50 bg-gray-100 dark:bg-gray-800' : 'text-gray-500 dark:text-gray-400')}
+              className={cn(navItemClass, 
+                pathname === '/home' ? activeClass : inactiveClass)}
               href="/home"
             >
               <HomeIcon className="h-4 w-4" />
               Home
             </Link>
             <Link
-              className={cn('flex items-center gap-2 rounded-lg px-3 py-2 transition-all hover:text-gray-900 dark:text-gray-50 dark:hover:text-gray-50', 
-              pathname === '/' ? 'text-gray-900 text-gray-900 dark:text-gray-50 bg-gray-100 dark:bg-gray-800' : 'text-gray-500 dark:text-gray-400')}
+              className={cn(navItemClass, 
+                pathname === '/credits' ? activeClass : inactiveClass)}
               href="/credits"
             >
               <EllipsisIcon className="h-4 w-4" />
               Credits
             </Link>
-          </nav>
-        </div>
+          </div>
+          <div className="mt-auto border-t border-gray-700 pt-2">
+            <Logout className={cn(navItemClass, inactiveClass)} />
+          </div>
+        </nav>
       </div>
     </div>
   )
