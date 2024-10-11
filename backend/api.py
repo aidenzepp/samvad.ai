@@ -343,74 +343,39 @@ def users_one(id: str):
 
 @_server.route("/login", methods=["POST"])
 def users_login():
-        if flask.request.method == "POST":
-                try:
-                        json_data = flask.request.get_json()
+    if flask.request.method == "POST":
+        try:
+            json_data = flask.request.get_json()
 
-                        id = json_data.get("id", "")
-                        if id == "":
-                                raise Exception("expected id, found none")
+            username = json_data.get("username", "")
+            if username == "":
+                raise Exception("expected username, found none")
 
-                        username = json_data.get("username", "")
-                        if username == "":
-                                raise Exception("expected username, found none")
+            password = json_data.get("password", "")
+            if password == "":
+                raise Exception("expected password, found none")
 
-                        password = json_data.get("password", "")
-                        if password == "":
-                                raise Exception("expected password, found none")
+            user = dbms.select_one("users", where={"username": username})
+            if user is None:
+                raise Exception("user not found")
 
-                        user = dbms.select_one("users", where={"id": id})
-                        if user is None:
-                                raise Exception("user not found")
+            # Debugging: Log stored password hash and result of password check
+            #_logger.info(f"Stored password hash: {user['password']}")
+            #_logger.info(f"Password received for login: {password}")
+            password_check = check_password_hash(user["password"], password)
+            #_logger.info(f"Password check result: {password_check}")
 
-                        if not check_password_hash(user["password"], password):
-                                raise Exception("invalid password")
+            if not password_check:
+                raise Exception("invalid password")
 
-                        flask.session["username"] = username
-                        log_success(flask.request)
+            flask.session["username"] = username
+            log_success(flask.request)
 
-                        return "", 200
-                except Exception as ex:
-                        log_failure(flask.request)
-
-                        return create_err(ex), 500
-
-@_server.route("/logout", methods=["POST"])
-def users_logout():
-        if flask.request.method == "POST":
-                flask.session.pop("username", None)
-
-                log_success(flask.request)
-
-                return "", 200
-                        
-@_server.route("/models", methods=["GET", "POST"])
-def models_all():
-        if flask.request.method == "GET":
-                try:
-                        models = dbms.select_all("models")
-
-                        log_success(flask.request)
-
-                        return flask.jsonify(models), 200
-                except Exception as ex:
-                        log_failure(flask.request)
-
-                        return create_err(ex), 500
-
-        if flask.request.method == "POST":
-                try:
-                        ok = dbms.insert_one("models", flask.request.get_json())
-                        if not ok:
-                                raise Exception("unable to create model")
-
-                        log_success(flask.request)
-
-                        return "", 200
-                except Exception as ex:
-                        log_failure(flask.request)
-
-                        return create_err(ex), 500
+            return "", 200
+        except Exception as ex:
+            _logger.error(f"Login error: {ex}")
+            log_failure(flask.request)
+            return create_err(ex), 500
 
 
 @_server.route("/models/<id>", methods=["GET", "PUT"])
@@ -461,17 +426,20 @@ def register():
         if not all(k in data for k in ("id", "username", "password")):
             return flask.jsonify({"error": "Missing required fields"}), 400
         
+        # Hash the password before storing it
+        data["password"] = generate_password_hash(data["password"])
+        
         # Insert into the database
         success = dbms.insert_one("users", data)
         
         if not success:
             return flask.jsonify({"error": "Failed to register user"}), 500
 
-        return flask.jsonify({"message": "User registered successfully"}), 201
+        return flask.jsonify({"message": "User registered successfully"}), 200
 
     except Exception as e:
         _logger.error(f"Error during registration: {str(e)}")
-        return flask.jsonify({"error": "Internal server error"}), 500
+        return flask.jsonify({"error": "Server error"}), 500
 
 
 
