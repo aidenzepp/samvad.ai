@@ -18,6 +18,7 @@ import dbms
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ml_models.ocr_translate import extract_text_from_image, google_translate_text
 from flask import Flask, request, jsonify
+from openai import OpenAI
  
 #
 # Constants
@@ -28,7 +29,9 @@ DEBUG = True
 #
 # Variables
 #
+
 _logger = logging.getLogger(__name__)
+_openai = OpenAI()
 _server = flask.Flask(__name__)
 CORS(_server)
 
@@ -86,6 +89,31 @@ def chats_one(id: str):
                         return create_err("unable to update chat"), 500
 
                 return "", 200
+
+@_server.route("/chats/<id>/query", methods=["POST"])
+def chats_query(id: str):
+        # The proper way to do it. Not necessary for now...
+        #chat = dbms.select_one("chats", where={"id": id})
+        #if chat is None:
+        #        return create_err("chat not found"), 500
+        #
+        #model = dbms.select_one("models", where={"id": chat["lang_model"]})
+        #if model is None:
+        #        return create_err("model not found"), 500
+
+        message = flask.request.get_json().get("message", "")
+        if message == "":
+                return create_err("expected 'message' content, none found"), 500
+
+        completion = _openai.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": message }
+                ]
+        )
+
+        return flask.jsonify({"response": completion.choices[0].message}), 200
 
 @_server.route("/files", methods=["GET", "POST"])
 def files_all():

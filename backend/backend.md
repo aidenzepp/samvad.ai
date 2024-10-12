@@ -7,6 +7,19 @@ This guide explains how to set up the necessary environment, install dependencie
 - Python 3.x installed
 - MongoDB installed
 - `virtualenv` installed for creating a virtual environment
+- OpenAI API key
+
+## Step 0: Export OpenAI Key
+If not a OpenAI key has not already been exported, export the key.
+
+- For macOS/Linux:
+    ```bash
+    export OPEN_API_KEY='your_api_key_here'
+    ```
+- For Windows:
+    ```
+    setx OPENAI_API_KEY "your_api_key_here"
+    ```
 
 ## Step 1: Set Up the Python Virtual Environment
 
