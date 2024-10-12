@@ -17,26 +17,19 @@ _logger = logging.getLogger(__name__)
 #
 
 def main():
-        _logger.info("main: starting...")
-
-        _logger.info("main: starting database")
-        try:
-                dbms.startup()
-        except Exception as ex:
-                _logger.error(f"main: error: {ex}")
+        ok = dbms.start()
+        if not ok:
+                _logger.error("unable to start database")
 
                 return
 
-        _logger.info("main: creating sample data")
-        dbms.sample()
+        ok = api.start()
+        if not ok:
+                _logger.error("unable to start api")
 
-        _logger.info("main: starting server")
-        api.startup()
+                return
 
-        _logger.info("main: cleaning database")
-        dbms.cleanup()
-
-        _logger.info("main: complete")
+        dbms.close()
 
 if __name__ == "__main__":
         main()

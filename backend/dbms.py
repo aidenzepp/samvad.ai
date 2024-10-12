@@ -1,11 +1,9 @@
 # std:
-import datetime
 import json
 import logging
 import os
 import platform
 from typing import Dict, List, Optional
-import uuid
 
 # lib:
 import pydash as _
@@ -24,162 +22,88 @@ _samvad = _client["samvad"]
 # Functions
 #
 
-def startup():
-        _logger.info("database: starting...")
-
-        _logger.info("database: checking for viable database connection")
-        if not connectable():
-                _logger.warning("database: database connection NOT viable")
-                _logger.info("database: attempting to make a new database connection")
-
-                _logger.info("database: starting mongodb system process")
-                system = platform.system()
-                if system == "Darwin":
-                        _logger.info("database: starting mongodb using homebrew on mac os")
-
-                        os.system("brew services start mongodb-community@7.0")
-                elif system == "Linux":
-                        _logger.info("database: starting mongodb on linux")
-
-                        os.system("sudo systemctl start mongodb")
-                elif system == "Windows":
-                        _logger.info("database: starting mongodb on windows")
-
-                        os.system("net start MongoDB")
-                else:
-                        raise Exception(f"unsupported operating system: {system}")
-
-        _logger.info("database: verifying database structure")
-        existing_collection_names = _samvad.list_collection_names()
-        required_collection_names = ["chats", "files", "users", "models"]
-
-        # Check for required collections; if one doesn't exist, create it.
-        for collection_name in required_collection_names:
-                if collection_name in existing_collection_names:
-                        continue
-
-                _logger.info(f"database: required collection not found: {collection_name}")
-                schema_name = f"{collection_name}.json"
-                schema_path = os.path.join("schemas", schema_name)
-               
-                try:
-                        _logger.info(f"database: searching for collection schema file: {schema_name}")
-                        with open(schema_path, "r") as schema_file:
-                                collection_schema = json.load(schema_file)
-                except FileNotFoundError:
-                        _logger.error(f"database: schema file not found for collection: {collection_name}")
-
-                        raise Exception(f"schema file not found: {schema_path}")
-                except json.JSONDecodeError:
-                        _logger.error(f"database: failed to parse schema file for collection: {collection_name}")
-
-                        raise Exception(f"schema file is not a valid JSON file: {schema_path}")
-
-                _samvad.create_collection(collection_name, validator={"$jsonSchema": collection_schema})
-
-        _logger.info("database: startup complete")
-
-def cleanup():
-        _logger.info("database: cleaning...")
-
-        _logger.info("database: closing mongodb client")
-        _client.close()
-
-        _logger.info("database: closing mongodb system process")
-        system = platform.system()
-        if system == "Darwin":
-                _logger.info("cleanup: stopping mongodb using homebrew on mac os")
-
-                os.system("brew services stop mongodb-community@7.0")
-        elif system == "Linux":
-                _logger.info("cleanup: stopping mongodb on linux")
-
-                os.system("sudo systemctl stop mongodb")
-        elif system == "Windows":
-                _logger.info("cleanup: stopping mongodb on windows")
-
-                os.system("net stop MongoDB")
-        else:
-                raise Exception(f"unsupported operating system: {system}")
-
-        _logger.info("database: cleanup complete")
-
-def connectable() -> bool:
+def viable_connection() -> bool:
         try:
                 _client.server_info()
-                return True
         except ConnectionFailure:
                 return False
 
-def sample():
-        _logger.info("sample: starting...")
+        return True
 
-        if False:
-                _logger.info("sample: dropping collections")
-                for collection_name in _samvad.list_collection_names():
-                        _samvad[collection_name].drop()
-
-        if True:
-                _logger.info("sample: deleting collections\' contents")
-                for collection_name in _samvad.list_collection_names():
-                        _samvad[collection_name].delete_many({})
-
-        if False:
-                _logger.info("sample: printing collection names")
-                for collection_name in _samvad.list_collection_names():
-                        _logger.info(f"\tcollection name: {collection_name}")
-
-        # Sample data for each collection
-        chat_data = {
-                "id": str(uuid.uuid4()),
-                "user_group": [str(uuid.uuid4()), str(uuid.uuid4())],
-                "file_group": [str(uuid.uuid4())],
-                "lang_model": str(uuid.uuid4()),
-                "created_at": datetime.datetime.now(),
-                "created_by": str(uuid.uuid4()),
-                "updated_at": datetime.datetime.now(),
-                "updated_by": str(uuid.uuid4())
-        }
-        file_data = {
-                "id": str(uuid.uuid4()),
-                "file_name": "document.pdf",
-                "file_type": "application/pdf",
-                "file_data": b"binary content of the file",
-                "file_from": "user upload",  # Added
-                "file_text": "Extracted text from the file",  # Added
-                "languages": ["English", "Spanish"]
+def start_connection() -> bool:
+        connection_commands = {
+                "Darwin": "brew services start mongodb-community@7.0",
+                "Linux": "sudo systemctl start mongodb",
+                "Windows": "net start MongoDB"
         }
 
-        user_data = {
-                "id": str(uuid.uuid4()),
-                "username": "test_user",
-                "password": "hashed_password"
-        }
-        model_data = {
-                "id": str(uuid.uuid4()),
-                "model_name": "gpt-3"
+        connection_command = connection_commands.get(platform.system())
+        if connection_command is not None:
+                os.system(connection_command)
+
+                return True
+
+        return False
+
+def close_connection() -> bool:
+        disconnection_commands = {
+                "Darwin": "brew services stop mongodb-community@7.0",
+                "Linux": "sudo systemctl stop mongodb",
+                "Windows": "net stop MongoDB"
         }
 
-        # Insert data into each collection
-        _logger.info("sample: inserting example data into collections")
-        collection_pairs = {
-                "chats": chat_data,
-                "files": file_data,
-                "users": user_data,
-                "models": model_data,
-        }
-        for collection_name, collection_data in collection_pairs.items():
-                ok = insert_one(collection_name, collection_data)
+        disconnection_command = disconnection_commands.get(platform.system())
+        if disconnection_command is not None:
+                os.system(disconnection_command)
+
+                return True
+
+def create_collection(collection_name: str) -> bool:
+        schema_name = f"{collection_name}.json"
+        schema_path = os.path.join("schemas", schema_name)
+
+        try:
+                with open(schema_path, "r") as schema_file:
+                        collection_schema = json.load(schema_file)
+
+                        _samvad.create_collection(collection_name, validator={"$jsonSchema": collection_schema})
+        except FileNotFoundError, json.JSONDecodeError:
+                return False
+
+        return True
+
+def verify_collection(collection_name: str) -> bool:
+        return collection_name in _samvad.list_collection_names()
+
+def start() -> bool:
+        if not viable_connection():
+                _logger.warning("database connection not viable, creating connection")
+
+                ok = start_connection()
                 if not ok:
-                        raise Exception(f"unable to insert record into {collection_name}")
+                        _logger.error("unable to start connection")
 
-        for collection_name in _samvad.list_collection_names():
-                _logger.info(f"sample: printing contents of \'{collection_name}\' collection")
+                        return False
 
-                for record in select_all(collection_name):
-                        print(json.dumps(record, indent=4, default=str))
+        for collection_name in ["chats", "files", "users", "models"]:
+                ok = verify_collection(collection_name)
+                if ok:
+                        continue
 
-        _logger.info("sample: complete")
+                ok = create_collection(collection_name)
+                if not ok:
+                        _logger.error(f"unable to create missing collection {collection_name}")
+
+                        return False
+
+        return True
+
+def close():
+        _client.close()
+
+        ok = close_connection()
+        if not ok:
+                _logger.warning("unable to close connection")
 
 def select_all(collection_name: str, where: Optional[Dict] = None, filter: Optional[Dict] = None) -> List[Dict]:
         # Check if the collection exists in the database.
@@ -250,3 +174,4 @@ def update_all(collection_name: str, ids: List[str], updates: List[Dict]) -> boo
 
 def update_one(collection_name: str, id: str, update: Dict) -> bool:
         return update_all(collection_name, [id], [update])
+
