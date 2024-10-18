@@ -16,7 +16,7 @@ from werkzeug.utils import secure_filename
 # dep:
 import dbms
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from ml_models.ocr_translate import extract_text_from_image, google_translate_text
+from ml_models.ocr_translate import extract_text_from_file, google_translate_text
 from flask import Flask, request, jsonify
 from openai import OpenAI
  
@@ -338,27 +338,30 @@ def extract_text():
             file_path = os.path.join(_server.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
 
-            extracted_text = extract_text_from_image(file_path)
+            # extract segments
+            extracted_segments = extract_text_from_file(file_path)
 
-            return flask.jsonify({'extracted_text': extracted_text}), 200
+            return flask.jsonify({'extracted_segments': extracted_segments}), 200
     except Exception as ex:
         _logger.error(f"extract_text: {ex}")
         return create_err(ex), 500
+
     
 @_server.route("/translate_text", methods=["POST"])
 def translate_text():
     try:
         data = flask.request.get_json()
-        if 'text' not in data or 'target_language' not in data:
+        if 'segments' not in data or 'target_language' not in data:
             return flask.jsonify({'error': 'Invalid input'}), 400
 
-        text = data['text']
-        target_language = data['target_language']
+        segments = data['segments']  # Text segments with bounding boxes and possibly page info
+        target_language = data['target_language'] # Target language for translation
 
-        translated_text = google_translate_text(text, target_language)
+        translated_segments = google_translate_text(segments, target_language)
 
-        return flask.jsonify({'translated_text': translated_text}), 200
+        return flask.jsonify({'translated_segments': translated_segments}), 200
     except Exception as ex:
         _logger.error(f"translate_text: {ex}")
         return create_err(ex), 500
+
 
