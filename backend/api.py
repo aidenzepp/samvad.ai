@@ -115,87 +115,6 @@ def chats_query(id: str):
 
         return flask.jsonify({"response": completion.choices[0].message}), 200
 
-@_server.route("/files", methods=["GET", "POST"])
-def files_all():
-        if flask.request.method == "GET":
-                files = dbms.select_all("files", filter={"file_data": 0, "file_text": 0})
-
-                return flask.jsonify(files), 200
-
-        if flask.request.method == "POST":
-                if "json" not in flask.request.form:
-                        return create_err("expected 'json' content, none found"), 500
-
-                if "file" not in flask.request.files:
-                        return create_err("expected 'file' content, none found"), 500
-
-                json_data = json.loads(flask.request.form.get("json"))
-                if json_data.get("id", "") != id:
-                        return create_err("mismatched ids"), 500
-
-                file_data = flask.request.files.get("file").read()
-                if len(file_data) == 0:
-                        return create_err("no file data"), 500
-
-                # TODO: Extract file text and set `"file_text"`.
-                file_text = ""
-
-                # Create corresponding translation document here?
-
-                ok = dbms.insert_one("files", json_data | {"file_data": file_data, "file_text": file_text})
-                if not ok:
-                        return create_err("unable to create file"), 500
-
-                return "", 200
-        
-@_server.route("/files/<id>", methods=["GET", "PUT"])
-def files_one(id: str):
-        if flask.request.method == "GET":
-                file = dbms.select_one("files", filter={"file_data": 0, "file_text": 0})
-                if file is None:
-                        return create_err("file not found"), 500
-
-                return flask.jsonify(file), 200
-
-        if flask.request.method == "PUT":
-                json_data = flask.request.get_json()
-                if json_data.get("id", "") != id:
-                        return create_err("mismatched ids"), 500
-
-                ok = dbms.update_one("files", id, {"$set": json_data})
-                if not ok:
-                        return create_err("unable to update file"), 500
-
-                return "", 200
-
-@_server.route("/files/<id>/translations", methods=["GET"])
-def files_from(id: str):
-        files = dbms.select_all("files", where={"file_from": id})
-
-        return flask.jsonify(files), 200
-
-@_server.route("/files/<id>/data", methods=["GET"])
-def files_data(id: str):
-        file = dbms.select_one("files", where={"id": id})
-        if file is None:
-                return create_err("file not found"), 500
-
-        return flask.send_file(
-                io.BytesIO(file["file_data"]),
-                mimetype=file["file_type"],
-                download_name=file["file_name"],
-                as_attachment=False,
-        )
-
-@_server.route("/files/<id>/text", methods=["GET"])
-def files_text(id: str):
-        file = dbms.select_one("files", where={"id": id})
-        if file is None:
-                return create_err("file not found"), 500
-        
-        # Send file instead?
-        return flask.jsonify({"file_text": file["file_text"]}), 200
-
 @_server.route("/users", methods=["GET", "POST"])
 def users_all():
         if flask.request.method == "GET":
@@ -293,34 +212,6 @@ def models_one(id: str):
                         return create_err("unable to update model"), 500
 
                 return "", 200
-
-@_server.route('/register', methods=['POST'])
-def register():
-    try:
-        # Get data from request
-        data = flask.request.json
-        
-        # Generate a UUID for the new user
-        data["id"] = str(uuid.uuid4())  # Add an ID field
-        
-        # Example validation
-        if not all(k in data for k in ("id", "username", "password")):
-            return flask.jsonify({"error": "Missing required fields"}), 400
-        
-        # Hash the password before storing it
-        data["password"] = generate_password_hash(data["password"])
-        
-        # Insert into the database
-        success = dbms.insert_one("users", data)
-        
-        if not success:
-            return flask.jsonify({"error": "Failed to register user"}), 500
-
-        return flask.jsonify({"message": "User registered successfully"}), 200
-
-    except Exception as e:
-        _logger.error(f"Error during registration: {str(e)}")
-        return flask.jsonify({"error": "Server error"}), 500
 
 @_server.route("/extract_text", methods=["POST"])
 def extract_text():
