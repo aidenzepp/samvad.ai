@@ -12,7 +12,7 @@ export default function Home() {
     { text: "to" },
     { text: "the" },
     { text: "next" },
-    { text: "level.", className: "text-blue-500" },
+    { text: "level"}
   ];
 
   return (
