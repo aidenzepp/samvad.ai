@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { TypewriterEffectSmooth } from "@/components/typewriter-effect";
 
@@ -14,6 +15,10 @@ export default function Home() {
     { text: "next" },
     { text: "level.", className: "text-blue-500" },
   ];
+
+  useEffect(() => {
+    localStorage.setItem("user", crypto.randomUUID());
+  }, []);
 
   return (
     <div className="h-screen bg-gray-900 flex flex-col items-center justify-center relative overflow-hidden">

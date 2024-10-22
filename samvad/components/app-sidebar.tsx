@@ -1,3 +1,5 @@
+"use client";
+
 import { Home, MessageCircle, User } from "lucide-react";
 import { BrainIcon } from "@/components/brain-icon";
 import {
@@ -11,6 +13,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar"
+import { usePathname } from "next/navigation";
 
 const items = [
   {
@@ -20,12 +23,14 @@ const items = [
   },
   {
     title: "Chats",
-    url: "/chats",
+    url: "/u/[uid]/chats",
     icon: MessageCircle,
   },
 ];
 
 export function AppSidebar() {
+  const pathname = usePathname();
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4 flex items-center">
@@ -41,7 +46,7 @@ export function AppSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url}>
+                    <a href={item.url.replace("[uid]", pathname.split("/")[2] ?? 0)}>
                       <item.icon />
                       <span>{item.title}</span>
                     </a>

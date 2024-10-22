@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect} from "react";
 import { columns } from "./columns"
 import { UUID } from "crypto"
 import { DataTable } from "@/components/ui/data-table"
@@ -11,24 +12,24 @@ import { ChatCreationForm } from "@/components/chat-creation-form";
 export default async function Chats() {
   const chats = [
     {
-      id: crypto.randomUUID() as UUID,
+      id: "c14b9dba-3ac7-4749-8826-a35b0d68ab05" as UUID,
       file_group: [],
       model_name: "GPT-4o",
-      created_by: crypto.randomUUID() as UUID,
+      created_by: "1eeb659f-8c42-4794-bb1f-62e30362a0c7" as UUID,
       created_at: new Date(),
     },
     {
-      id: crypto.randomUUID() as UUID,
+      id: "8d292bc8-5c22-4cbd-9356-dfd16b327bbe" as UUID,
       file_group: [],
       model_name: "GPT-4o",
-      created_by: crypto.randomUUID() as UUID,
+      created_by: "1eeb659f-8c42-4794-bb1f-62e30362a0c7" as UUID,
       created_at: new Date(),
     },
     {
-      id: crypto.randomUUID() as UUID,
+      id: "31a1e75a-1104-4e67-b3ae-0b9f542080e9" as UUID,
       file_group: [],
       model_name: "GPT-4o",
-      created_by: crypto.randomUUID() as UUID,
+      created_by: "1eeb659f-8c42-4794-bb1f-62e30362a0c7" as UUID,
       created_at: new Date(),
     },
   ];
@@ -55,5 +56,5 @@ export default async function Chats() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

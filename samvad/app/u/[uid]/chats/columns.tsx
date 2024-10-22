@@ -3,8 +3,8 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ChatData } from "@/lib/types"
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 export const columns: ColumnDef<ChatData>[] = [
   {
@@ -31,10 +31,11 @@ export const columns: ColumnDef<ChatData>[] = [
     accessorKey: "id",
     header: "ID",
     cell: ({ row }) => {
-      const id = row.getValue("id") as string
+      const pathname = usePathname();
+      const cid = row.getValue("id") as string
       return (
-        <Link href={`/chats/${id}`} className="hover:underline">
-          {id}
+        <Link href={`${pathname}/${cid}`} className="hover:underline">
+          {cid}
         </Link>
       )
     },

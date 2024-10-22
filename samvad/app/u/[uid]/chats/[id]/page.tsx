@@ -3,11 +3,6 @@
 import React, { useState } from "react";
 import { ChatBubble } from "@/components/chat-bubble";
 import { ChatInput } from "@/components/chat-input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Send } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface Message {
   message: string;
