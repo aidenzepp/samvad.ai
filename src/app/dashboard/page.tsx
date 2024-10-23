@@ -7,10 +7,10 @@ import { useRouter } from 'next/navigation';
 import { Navbar } from "@/components/ui/navbar";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+import { ModeToggle } from "@/components/mode-toggle";
 
 export default function Dashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -29,7 +29,7 @@ export default function Dashboard() {
         id: crypto.randomUUID(),
         file_group,
         model_name: model,
-        created_by: "USER_UUID", // Replace with actual user UUID
+        created_by: "USER_UUID",
         created_at: new Date(),
       };
 
@@ -75,7 +75,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Navbar />
       <div className="flex-grow flex items-center justify-center p-4">
         <div className="flex gap-8 md:gap-12 lg:gap-16 justify-center w-full max-w-[1200px]">
@@ -100,7 +100,7 @@ export default function Dashboard() {
               </Label>
               <div className="col-span-3">
                 <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer flex flex-col items-center justify-center"
+                  className="border-2 border-dashed border-input rounded-lg p-6 cursor-pointer flex flex-col items-center justify-center"
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
@@ -119,8 +119,8 @@ export default function Dashboard() {
                     fileInput.click();
                   }}
                 >
-                  <Upload className="h-6 w-6 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">Click or drag files to upload</p>
+                  <Upload className="h-6 w-6 text-muted-foreground" />
+                  <p className="mt-2 text-sm text-muted-foreground">Click or drag files to upload</p>
                 </div>
               </div>
             </div>
@@ -139,7 +139,7 @@ export default function Dashboard() {
                     >
                       {file.name.slice(0, 10) + (file.name.length > 10 ? "..." : "")}
                       <span
-                        className="absolute top-0 right-0 -mt-1 -mr-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-0 right-0 -mt-1 -mr-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => {
                           e.stopPropagation();
                           setFiles(files.filter((_, i) => i !== index));
@@ -177,16 +177,16 @@ function ChatButton({
   href?: string;
 }) {
   const buttonClasses = `
-    bg-gray-800 w-[220px] h-[220px] rounded-3xl shadow-md
+    bg-card hover:bg-accent w-[220px] h-[220px] rounded-3xl shadow-md
     transition-all duration-300 group relative overflow-hidden
     flex flex-col items-center justify-center text-center
-    hover:bg-white p-4
+    p-4 border border-border
   `;
 
   const content = (
     <>
-      <Icon className="h-16 w-16 mb-4 text-white transition-colors duration-300 group-hover:text-gray-900" />
-      <span className="text-xl font-semibold text-white transition-colors duration-300 group-hover:text-gray-900">
+      <Icon className="h-16 w-16 mb-4 text-foreground transition-colors duration-300" />
+      <span className="text-xl font-semibold text-foreground transition-colors duration-300">
         {label}
       </span>
     </>

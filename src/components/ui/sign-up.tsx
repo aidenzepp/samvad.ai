@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import axios from "axios";
 import { useRouter } from 'next/navigation';
+import { Button } from "@/components/ui/button";
+import { ModeToggle } from "@/components/mode-toggle";
 
 export function SignupForm() {
   const router = useRouter();
@@ -81,15 +83,18 @@ export function SignupForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden">
+      <div className="absolute top-4 right-4 z-50">
+        <ModeToggle />
+      </div>
       <div className="z-10 w-full max-w-md">
-        <div className="bg-gray-800 rounded-2xl p-8 shadow-xl">
-          <h2 className="font-bold text-3xl text-gray-100 mb-6 text-center">
+        <div className="bg-card rounded-2xl p-8 shadow-xl border border-border">
+          <h2 className="font-bold text-3xl text-foreground mb-6 text-center">
             Register
           </h2>
           <form className="space-y-6" onSubmit={handleSubmit}>
             <LabelInputContainer>
-              <Label htmlFor="username" className="text-gray-300">Username</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
                 placeholder="username"
@@ -97,11 +102,11 @@ export function SignupForm() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="bg-gray-700 text-gray-100 border-gray-600 focus:border-blue-500"
+                className="bg-input border-input"
               />
             </LabelInputContainer>
             <LabelInputContainer>
-              <Label htmlFor="password" className="text-gray-300">Password</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 placeholder="••••••••"
@@ -109,11 +114,11 @@ export function SignupForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-gray-700 text-gray-100 border-gray-600 focus:border-blue-500"
+                className="bg-input border-input"
               />
             </LabelInputContainer>
             <LabelInputContainer>
-              <Label htmlFor="confirmPassword" className="text-gray-300">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
               <Input
                 id="confirmPassword"
                 placeholder="••••••••"
@@ -121,32 +126,29 @@ export function SignupForm() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="bg-gray-700 text-gray-100 border-gray-600 focus:border-blue-500"
+                className="bg-input border-input"
               />
             </LabelInputContainer>
-            <button
-              className="w-full px-8 py-3 rounded-full bg-blue-600 text-white font-semibold text-lg shadow-lg hover:bg-blue-700 transition duration-300"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? "Registering..." : "Register"}
-            </button>
+              <Button 
+                className="w-full text-lg h-12"
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? "Registering..." : "Register"}
+              </Button>
           </form>
-          {error && <p className="text-red-500 text-center mt-4">{error}</p>}
-          {success && <p className="text-green-500 text-center mt-4">{success}</p>}
-          <p className="text-center text-gray-400 mt-6">
+          {error && <p className="text-destructive text-center mt-4">{error}</p>}
+          {success && <p className="text-primary text-center mt-4">{success}</p>}
+          <p className="text-center text-muted-foreground mt-6">
             Already a member?{' '}
-            <Link href="/login" className="text-blue-400 hover:text-blue-300 underline underline-offset-4">
+            <Link 
+              href="/login" 
+              className="text-primary hover:text-primary/90 underline underline-offset-4"
+            >
               Sign In
             </Link>
           </p>
         </div>
-      </div>
-
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-900/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-purple-900/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-80 h-80 bg-indigo-900/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
       </div>
     </div>
   );

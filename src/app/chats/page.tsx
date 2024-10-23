@@ -21,10 +21,10 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Minus, Upload } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "@/hooks/use-toast"
-import { Separator } from "@/components/ui/separator";
-import { Navbar } from "@/components/ui/navbar";
+import { Separator } from "@/components/ui/separator"
+import { Navbar } from "@/components/ui/navbar"
 
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -35,7 +35,7 @@ async function fileToBase64(file: File): Promise<string> {
   });
 }
 
-function ChatCreationForm() {
+function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [model, setModel] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -49,7 +49,7 @@ function ChatCreationForm() {
         file_group.push({ name, data });
       }
 
-      const user_uuid: UUID = crypto.randomUUID() as UUID; // FIXME
+      const user_uuid: UUID = crypto.randomUUID() as UUID;
       const chat_data: ChatData = {
         id: crypto.randomUUID() as UUID,
         file_group: file_group,
@@ -64,10 +64,10 @@ function ChatCreationForm() {
       });
       if (response.ok) {
         toast({
-          variant: "default",
           title: "Chat created successfully",
           description: "Your chat has been created.",
         });
+        await onSuccess();
       } else {
         toast({
           variant: "destructive",
@@ -85,6 +85,7 @@ function ChatCreationForm() {
       setOpen(false);
     }
   };
+
   const handleFileUpload = (files: File[]) => {
     const pdfs = files.filter(file => file.type === 'application/pdf');
     
@@ -134,7 +135,7 @@ function ChatCreationForm() {
             </Label>
             <div className="col-span-3">
               <div
-                className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer flex flex-col items-center justify-center"
+                className="border-2 border-dashed border-input rounded-lg p-6 cursor-pointer flex flex-col items-center justify-center hover:border-muted-foreground transition-colors"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -155,7 +156,10 @@ function ChatCreationForm() {
                   };
                 }}
               >
-                <Upload className="h-6 w-6 text-gray-400" />
+                <Upload className="h-6 w-6 text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Click or drag files to upload
+                </p>
                 <input
                   type="file"
                   accept=".pdf"
@@ -169,7 +173,7 @@ function ChatCreationForm() {
             </div>
           </div>
           <Separator />
-          <div className="grid grid-cols-4 items-center gap-4 ">
+          <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="uploadedFiles" className="text-right">
               <strong>Uploaded Files</strong>
             </Label>
@@ -183,7 +187,7 @@ function ChatCreationForm() {
                   >
                     {file.name.slice(0, 10) + (file.name.length > 10 ? "..." : "")}
                     <span
-                      className="absolute top-0 right-0 -mt-1 -mr-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-0 right-0 -mt-1 -mr-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation();
                         const newFiles = files.filter((_, i) => i !== index);
@@ -200,53 +204,49 @@ function ChatCreationForm() {
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleSubmit} disabled={!model}>Submit</AlertDialogAction>
+          <AlertDialogAction onClick={handleSubmit} disabled={!model}>
+            Submit
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
 }
 
-export default async function Chats() {
-  const chats = [
-    {
-      id: crypto.randomUUID() as UUID,
-      file_group: [],
-      model_name: "GPT-4o",
-      created_by: crypto.randomUUID() as UUID,
-      created_at: new Date(),
-    },
-    {
-      id: crypto.randomUUID() as UUID,
-      file_group: [],
-      model_name: "GPT-4o",
-      created_by: crypto.randomUUID() as UUID,
-      created_at: new Date(),
-    },
-    {
-      id: crypto.randomUUID() as UUID,
-      file_group: [],
-      model_name: "GPT-4o",
-      created_by: crypto.randomUUID() as UUID,
-      created_at: new Date(),
-    },
-  ];
+export default function Chats() {
+  const [chats, setChats] = useState<ChatData[]>([]);
+  
+  const fetchChats = async () => {
+    const response = await fetch('/api/chats');
+    if (response.ok) {
+      const data = await response.json();
+      setChats(data);
+    }
+  };
+
+  useEffect(() => {
+    fetchChats();
+  }, []);
 
   return (
-    <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
+    <div className="flex flex-col min-h-screen bg-background">
       <Navbar />
       <div className="flex-1 p-4">
-        <Card className="w-full bg-white dark:bg-gray-800">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-gray-900 dark:text-white">Chats</CardTitle>
-              <CardDescription className="text-gray-600 dark:text-gray-300">
+              <CardTitle>Chats</CardTitle>
+              <CardDescription>
                 A list of all your chats.
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
-              <ChatCreationForm />
-              <Button variant="outline" size="icon" className="dark:border-gray-600 dark:text-gray-300">
+              <ChatCreationForm onSuccess={fetchChats} />
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={fetchChats}
+              >
                 <Minus className="h-4 w-4" />
               </Button>
             </div>
@@ -257,5 +257,5 @@ export default async function Chats() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
