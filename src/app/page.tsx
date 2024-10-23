@@ -1,22 +1,12 @@
 "use client";
 
 import React from "react";
-import { TypewriterEffectSmooth } from "@/components/ui/typewriter-effect";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 
 export default function Home() {
-  const words = [
-    { text: "Bring" },
-    { text: "language" },
-    { text: "processing" },
-    { text: "to" },
-    { text: "the" },
-    { text: "next" },
-    { text: "level" }
-  ];
-
+  
   return (
     <div className="h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden">
       <div className="absolute top-4 right-4 z-50">
@@ -27,9 +17,6 @@ export default function Home() {
           <h1 className="text-4xl md:text-6xl font-bold mb-8 text-foreground">
             Samvad.ai
           </h1>
-        </div>
-        <div className="h-20 mb-8">
-          <TypewriterEffectSmooth words={words} />
         </div>
         <div className="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4 mt-8">
           <Link href="/register" passHref>
