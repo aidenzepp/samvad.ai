@@ -1,0 +1,31 @@
+{
+        "bsonType": "object",
+        "required": [
+                "id",
+                "user_group", 
+                "file_group",
+                "lang_model",
+                "created_at",
+                "created_by",
+                "updated_at",
+                "updated_by"
+        ],
+        "properties": {
+                "id": {"bsonType": "string", "description": "must be a UUID"},
+                "user_group": {
+                        "bsonType": "array",
+                        "items": {"bsonType": "string", "description": "must be UUID"},
+                        "description": "List of users involved (UUIDs)"
+                },
+                "file_group": {
+                        "bsonType": "array",
+                        "items": {"bsonType": "string", "description": "must be UUID"},
+                        "description": "List of files involved (UUIDs)"
+                },
+                "lang_model": {"bsonType": "string", "description": "must be UUID"},
+                "created_at": {"bsonType": "date", "description": "must be a DateTime"},
+                "created_by": {"bsonType": "string", "description": "must be UUID"},
+                "updated_at": {"bsonType": "date", "description": "must be a DateTime"},
+                "updated_by": {"bsonType": "string", "description": "must be UUID"}
+        }
+}
