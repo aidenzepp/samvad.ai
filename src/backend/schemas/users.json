@@ -1,9 +1,0 @@
-{
-        "bsonType": "object",
-        "required": ["id", "username", "password"],
-        "properties": {
-                "id": {"bsonType": "string", "description": "must be a UUID"},
-                "username": {"bsonType": "string", "description": "must be a string"},
-                "password": {"bsonType": "string", "description": "must be a string"}
-        }
-}

@@ -1,8 +1,0 @@
-{
-        "bsonType": "object",
-        "required": ["id", "model_name"],
-        "properties": {
-                "id": {"bsonType": "string", "description": "must be a UUID"},
-                "model_name": {"bsonType": "string", "description": "must be a string"}
-        }
-}
