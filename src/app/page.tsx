@@ -19,7 +19,7 @@ export default function Home() {
           </h1>
         </div>
         <div className="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4 mt-8">
-          <Link href="/register" passHref>
+          <Link href="/portal" passHref>
             <Button 
               size="lg" 
               className="text-lg h-12 px-8 rounded-full"
@@ -27,7 +27,7 @@ export default function Home() {
               Join now
             </Button>
           </Link>
-          <Link href="/login" passHref>
+          <Link href="/portal" passHref>
             <Button 
               size="lg"
               variant="secondary"

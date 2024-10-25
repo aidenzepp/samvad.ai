@@ -34,7 +34,7 @@ export default function Chatting() {
             </Card>
           </Panel>
           <ResizeHandle />
-          <Panel minSize={30}>
+          <Panel minSize={30} defaultSize={42.5}>
             <Card className="h-full rounded-none border-border">
               <CardHeader>
                 <CardTitle>OCR text</CardTitle>
@@ -47,7 +47,7 @@ export default function Chatting() {
             </Card>
           </Panel>
           <ResizeHandle />
-          <Panel minSize={30}>
+          <Panel minSize={30} defaultSize={42.5}>
             <Card className="h-full rounded-none border-border">
               <CardHeader>
                 <CardTitle>API</CardTitle>

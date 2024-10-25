@@ -1,7 +1,8 @@
 "use client";
 
+import Cookies from "js-cookie";
 import { columns } from "./columns"
-import { ChatData, FileData } from "@/lib/types"
+import { ChatSchema, FileSchema } from "@/lib/mongodb"
 import { UUID } from "crypto"
 import { DataTable } from "@/components/ui/data-table"
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"
@@ -25,15 +26,7 @@ import { useState, useEffect } from "react"
 import { toast } from "@/hooks/use-toast"
 import { Separator } from "@/components/ui/separator"
 import { Navbar } from "@/components/ui/navbar"
-
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-  });
-}
+import axios from "axios"
 
 function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
   const [open, setOpen] = useState(false);
@@ -42,27 +35,20 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
 
   const handleSubmit = async () => {
     try {
-      let file_group: FileData[] = [];
-      for (const file of files) {
-        const name = file.name;
-        const data = await fileToBase64(file);
-        file_group.push({ name, data });
-      }
-
-      const user_uuid: UUID = crypto.randomUUID() as UUID;
-      const chat_data: ChatData = {
+      const file_group: FileSchema[] = await Promise.all(files.map(async (file) => ({
+        name: file.name,
+        data: Buffer.from(await file.arrayBuffer()),
+      })));
+      const chat_data: ChatSchema = {
         id: crypto.randomUUID() as UUID,
         file_group: file_group,
         model_name: model,
-        created_by: user_uuid,
+        created_by: Cookies.get('uid') as UUID,
         created_at: new Date(),
       };
 
-      const response = await fetch("/api/chats", {
-        method: "POST",
-        body: JSON.stringify(chat_data),
-      });
-      if (response.ok) {
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chats`, chat_data);
+      if (response.status === 200) {
         toast({
           title: "Chat created successfully",
           description: "Your chat has been created.",
@@ -214,13 +200,26 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
 }
 
 export default function Chats() {
-  const [chats, setChats] = useState<ChatData[]>([]);
+  const [chats, setChats] = useState<ChatSchema[]>([]);
   
   const fetchChats = async () => {
-    const response = await fetch('/api/chats');
-    if (response.ok) {
-      const data = await response.json();
-      setChats(data);
+    try {
+      const response = await axios.get<ChatSchema[]>(`${process.env.NEXT_PUBLIC_API_URL}/chats`);
+      if (response.status === 200) {
+        setChats(response.data);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to fetch chats",
+          description: "Please try again.",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Failed to fetch chats",
+        description: "Please try again.",
+      });
     }
   };
 

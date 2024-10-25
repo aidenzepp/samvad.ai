@@ -3,14 +3,17 @@
 import React, { useState } from "react";
 import { PlusIcon, MessageSquare, Upload } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Navbar } from "@/components/ui/navbar";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { ModeToggle } from "@/components/mode-toggle";
+import { UUID } from "crypto";
+import Cookies from "js-cookie";
+import { ChatSchema, FileSchema} from "@/lib/mongodb";
+import axios from "axios";
 
 export default function Dashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -20,30 +23,24 @@ export default function Dashboard() {
 
   const handleSubmit = async () => {
     try {
-      const file_group = await Promise.all(files.map(async (file) => {
-        const data = await fileToBase64(file);
-        return { name: file.name, data };
+      const file_group: FileSchema[] = await Promise.all(files.map(async (file) => {
+        return { name: file.name, data: Buffer.from(await file.arrayBuffer()) };
       }));
-
-      const chat_data = {
-        id: crypto.randomUUID(),
+      const chat_data: ChatSchema = {
+        id: crypto.randomUUID() as UUID,
         file_group,
         model_name: model,
-        created_by: "USER_UUID",
+        created_by: Cookies.get('uid') as UUID,
         created_at: new Date(),
       };
 
-      const response = await fetch("/api/chats", {
-        method: "POST",
-        body: JSON.stringify(chat_data),
-      });
-
-      if (response.ok) {
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chats`, chat_data);
+      if (response.status === 200) {
         toast({
           title: "Chat created successfully",
           description: "Redirecting to chat page...",
         });
-        router.push('/chats');
+        router.push(`/chats/${chat_data.id}`);
       } else {
         throw new Error("Failed to create chat");
       }
@@ -60,7 +57,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleFileUpload = (uploadedFiles: File[]) => {
+  const handleFileUpload = async (uploadedFiles: File[]) => {
     const pdfs = uploadedFiles.filter(file => file.type === 'application/pdf');
     
     if (pdfs.length !== uploadedFiles.length) {
@@ -205,13 +202,4 @@ function ChatButton({
       {content}
     </button>
   );
-}
-
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-  });
 }
