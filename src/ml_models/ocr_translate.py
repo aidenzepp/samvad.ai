@@ -1,19 +1,23 @@
 import os
+import json
+from dotenv import load_dotenv
 import io
 from google.cloud import vision
 from google.cloud import translate_v2 as translate
 from pdf2image import convert_from_path
 
-# You will have to make folder named API_keys outside repository and store the API key there
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "../../API_keys/samvad_translate.json"
+# Load environment variables from .env.local
+load_dotenv('../../.env.local')
+
+# Get credentials from environment variable
+credentials = json.loads(os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON'))
 
 def extract_text_from_file(file_path):
     """Extracts text and bounding boxes from an image or PDF using Google Cloud Vision API"""
-    client = vision.ImageAnnotatorClient()
+    client = vision.ImageAnnotatorClient.from_service_account_info(credentials)
 
     file_ext = os.path.splitext(file_path)[1].lower()
-
-    segments = []  # Returning this: holds all text segments and bounding boxes
+    segments = []
 
     if file_ext == '.pdf':
         # Convert PDF to images (one image per page)
@@ -38,11 +42,11 @@ def extract_text_from_file(file_path):
             # Extract text and bounding boxes
             for annotation in response.text_annotations[1:]:  # Skip the first, it's the entire page text
                 text = annotation.description
-                vertices = [(v.x, v.y) for v in annotation.bounding_poly.vertices]
+                #vertices = [(v.x, v.y) for v in annotation.bounding_poly.vertices]
                 segments.append({
                     "text": text,
-                    "bounding_box": vertices,
-                    "page": i + 1
+                    #"bounding_box": vertices,
+                    #"page": i + 1
                 })
 
     elif file_ext in ['.png', '.jpg', '.jpeg']:
@@ -59,10 +63,10 @@ def extract_text_from_file(file_path):
         # Extract text and bounding boxes
         for annotation in response.text_annotations[1:]:  # Skip the first, it's the entire image text
             text = annotation.description
-            vertices = [(v.x, v.y) for v in annotation.bounding_poly.vertices]
+            #vertices = [(v.x, v.y) for v in annotation.bounding_poly.vertices]
             segments.append({
                 "text": text,
-                "bounding_box": vertices
+                #"bounding_box": vertices
             })
 
     else:
@@ -72,7 +76,7 @@ def extract_text_from_file(file_path):
 
 
 def google_translate_text(segments, target_language='en'):
-    translate_client = translate.Client()
+    translate_client = translate.Client.from_service_account_info(credentials)
     translated_segments = []
 
     for segment in segments:
@@ -81,8 +85,8 @@ def google_translate_text(segments, target_language='en'):
         translated_segments.append({
             "original_text": original_text,
             "translated_text": result['translatedText'],
-            "bounding_box": segment['bounding_box'],
-            "page": segment.get("page", 1)  # Add page number if available
+            #"bounding_box": segment['bounding_box'],
+            #"page": segment.get("page", 1)  # Add page number if available
         })
 
     return translated_segments
