@@ -2,11 +2,11 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChatData } from "@/lib/types"
+import { ChatSchema } from "@/lib/mongodb"
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export const columns: ColumnDef<ChatData>[] = [
+export const columns: ColumnDef<ChatSchema>[] = [
   {
     id: "select",
     header: ({ table }) => (
