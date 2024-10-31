@@ -39,7 +39,7 @@ export default async function handler(
       : null;
 
     if (customResponse) {
-      // If a custom response exists, return it immediately
+      // Returns custom responses
       console.log("Custom Response Triggered:", customResponse);
       return res.status(200).json({ response: customResponse });
     }
