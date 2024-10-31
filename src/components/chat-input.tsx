@@ -35,7 +35,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
     <div className="flex items-center space-x-2">
       <Textarea
         placeholder="Type your message here..."
-        className="flex-grow max-h-[200px] min-h-[60px] overflow-y-auto resize-y"
+        className="border-gray-200 dark:border-zinc-900 dark:bg-zinc-800 min-h-[80px] max-h-[500px] overflow-y-auto resize-y"
         value={message}
         onChange={handleMessageChange}
         onKeyDown={handleKeyDown}
