@@ -23,11 +23,16 @@ export default async function handler(
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ message: "Messages array is required" });
     }
-
-    // Check for custom responses first
     const lastMessage = messages[messages.length - 1];
-    const lastMessageContent =
-      typeof lastMessage === "string" ? lastMessage : lastMessage?.content;
+    let lastMessageContent: string | undefined;
+
+    if (typeof lastMessage === "string") {
+      lastMessageContent = lastMessage;
+    } else if (lastMessage && typeof lastMessage.content === "string") {
+      lastMessageContent = lastMessage.content;
+    } else {
+      lastMessageContent = undefined;
+    }
 
     const customResponse = lastMessageContent
       ? getCustomResponse(lastMessageContent)
@@ -42,26 +47,44 @@ export default async function handler(
     const conversationMessages = [
       { role: "system", content: SYSTEM_PROMPT },
       ...messages
-        .map((message: string | { content?: string }) => {
-          let content = "";
-
-          if (typeof message === "string") {
-            content = message.trim();
-          } else if (message.content && typeof message.content === "string") {
-            content = message.content.trim();
-          } else {
-            console.error("Invalid message content:", message);
-            return null;
+        .map(
+          (
+            message: string | { role?: string; content?: string },
+            index: number
+          ) => {
+            if (typeof message === "string") {
+              return {
+                role: "user",
+                content: message.trim(),
+              };
+            } else if (
+              message &&
+              typeof message.content === "string" &&
+              typeof message.role === "string" &&
+              ["user", "assistant"].includes(message.role)
+            ) {
+              return {
+                role: message.role,
+                content: message.content.trim(),
+              };
+            } else if (
+              message &&
+              typeof message.content === "string" &&
+              !message.role
+            ) {
+              const role = index % 2 === 0 ? "user" : "assistant";
+              return {
+                role,
+                content: message.content.trim(),
+              };
+            } else {
+              console.error("Invalid message format:", message);
+              return null;
+            }
           }
-
-          return {
-            role: "user",
-            content,
-          };
-        })
+        )
         .filter(Boolean),
     ];
-
     console.log("Prepared conversation messages:", conversationMessages);
 
     if (conversationMessages.length <= 1) {

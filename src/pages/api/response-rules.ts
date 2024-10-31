@@ -1,4 +1,4 @@
-export const getCustomResponse = (userInput: string): string => {
+export const getCustomResponse = (userInput: string): string | null => {
   const lowerInput = userInput.toLowerCase();
 
   // Responses for common messages
@@ -56,6 +56,6 @@ export const getCustomResponse = (userInput: string): string => {
     return "I'm Samvad.ai, your go-to for document insights!";
   }
 
-  // Default response if no matches found
-  return "I'm here to assist you with your document analysis. Please ask me anything!";
+  // Return null if no custom response matches
+  return null;
 };
