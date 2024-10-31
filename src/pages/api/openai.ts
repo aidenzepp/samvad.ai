@@ -43,7 +43,6 @@ export default async function handler(
       return res.status(200).json({ response: customResponse });
     }
 
-    // Prepare conversation with the system_prompt message
     const conversationMessages = [
       {
         role: "system",
