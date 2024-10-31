@@ -1,7 +1,7 @@
 export const getCustomResponse = (userInput: string): string => {
   const lowerInput = userInput.toLowerCase();
 
-  // Responses for common greetings and inquiries
+  // Responses for common messages
   if (lowerInput.includes("hello") || lowerInput.includes("hi")) {
     return "Hello! How can I assist you today with your document analysis?";
   }
@@ -42,7 +42,7 @@ export const getCustomResponse = (userInput: string): string => {
     return "I was developed by Samvad.ai to assist with document analysis.";
   }
 
-  // Responses for more specific queries
+  // Responses for more specific messages
   if (lowerInput.includes("tell me about") || lowerInput.includes("explain")) {
     return "Please provide the document details, and I'll help analyze it!";
   }

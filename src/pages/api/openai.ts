@@ -18,10 +18,8 @@ export default async function handler(
   try {
     const { messages } = req.body;
 
-    // Log incoming messages for debugging
     console.log("Incoming messages:", messages);
 
-    // Ensure the messages array is valid
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ message: "Messages array is required" });
     }
@@ -41,7 +39,6 @@ export default async function handler(
       return res.status(200).json({ response: customResponse });
     }
 
-    // Prepare the conversation messages for OpenAI API call
     const conversationMessages = [
       { role: "system", content: SYSTEM_PROMPT },
       ...messages
