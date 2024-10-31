@@ -56,6 +56,7 @@ export const getCustomResponse = (userInput: string): string | null => {
     return "I'm Samvad.ai, your go-to for document insights!";
   }
 
+  //gpt gives response based on chat history
   // Return null if no custom response matches
   return null;
 };
