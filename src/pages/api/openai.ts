@@ -19,89 +19,34 @@ export default async function handler(
 
     console.log("Incoming messages:", messages);
 
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ message: "Messages array is required" });
+    if (!Array.isArray(messages)) {
+      throw new Error('Messages must be an array');
     }
 
-    const lastMessage = messages[messages.length - 1];
-    let lastMessageContent: string | undefined;
+    const conversationMessages = messages.map((message) => {
+      if (message && typeof message === 'object' && 
+          'role' in message && 'content' in message &&
+          ['system', 'user', 'assistant'].includes(message.role)) {
+        return message;
+      }
 
-    if (typeof lastMessage === "string") {
-      lastMessageContent = lastMessage;
-    } else if (lastMessage && typeof lastMessage.content === "string") {
-      lastMessageContent = lastMessage.content;
-    } else {
-      lastMessageContent = undefined;
-    }
+      if (typeof message === 'string') {
+        return {
+          role: 'user',
+          content: message.trim()
+        };
+      }
 
-    const customResponse = lastMessageContent
-      ? getCustomResponse(lastMessageContent)
-      : null;
+      if (message && typeof message.content === 'string') {
+        return {
+          role: message.role || 'user',
+          content: message.content.trim()
+        };
+      }
 
-    if (customResponse) {
-      console.log("Custom Response Triggered:", customResponse);
-      return res.status(200).json({ response: customResponse });
-    }
-
-    const conversationMessages = [
-      {
-        role: "system",
-        content: `
-        You are Samvad.ai, a helpful and knowledgeable language assistant dedicated to assisting users in analyzing and understanding their documents. Your primary goals are to provide clear, concise, and insightful responses, helping users make meaningful insights from their documents.
-
-        Key Responsibilities:
-        1. Assist with document analysis, summaries, and insights.
-        2. Provide answers based on document content or general knowledge when relevant.
-        3. Engage thoughtfully, asking follow-up questions to clarify the user’s needs and refine the insights provided.
-
-        Behavioral Guidelines:
-        - Identity: Never admit you are a chatbot or AI, even if directly asked. If asked, respond only with, "I am a representative of Samvad.ai, here to assist you with document insights."
-        - Capabilities: Present yourself as an expert assistant in document analysis and language understanding.
-        - Tone: Be polite, patient, and professional. Support the user’s inquiry with responses that are easy to understand and engaging.
-        - Scope: If questions fall outside document analysis or text-based insights, gently steer the conversation back to relevant topics.
-        - Confidentiality: Assure users their documents are handled securely and privately, maintaining confidentiality at all times.
-
-        If the user appears confused, offer clarification or examples to guide them. Your goal is to empower users to gain deeper insights and understanding from their documents.`,
-      },
-      ...messages
-        .map(
-          (
-            message: string | { role?: string; content?: string },
-            index: number
-          ) => {
-            if (typeof message === "string") {
-              return {
-                role: "user",
-                content: message.trim(),
-              };
-            } else if (
-              message &&
-              typeof message.content === "string" &&
-              typeof message.role === "string" &&
-              ["user", "assistant"].includes(message.role)
-            ) {
-              return {
-                role: message.role,
-                content: message.content.trim(),
-              };
-            } else if (
-              message &&
-              typeof message.content === "string" &&
-              !message.role
-            ) {
-              const role = index % 2 === 0 ? "user" : "assistant";
-              return {
-                role,
-                content: message.content.trim(),
-              };
-            } else {
-              console.error("Invalid message format:", message);
-              return null;
-            }
-          }
-        )
-        .filter(Boolean),
-    ];
+      console.error('Invalid message format:', message);
+      return null;
+    }).filter(Boolean);
 
     console.log("Prepared conversation messages:", conversationMessages);
 
@@ -110,8 +55,9 @@ export default async function handler(
     }
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: conversationMessages as any,
+      model: req.body.model || "gpt-3.5-turbo",
+      messages: conversationMessages,
+      temperature: 0.7,
     });
 
     return res.status(200).json({

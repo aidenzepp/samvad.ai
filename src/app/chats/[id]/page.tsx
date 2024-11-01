@@ -42,9 +42,11 @@ interface FileSchema {
 interface FileUploadDialogProps {
   setExtractedText: (text: string) => void;
   setTranslatedText: (text: string) => void;
+  setFiles: (files: FileSchema[]) => void;
+  files: FileSchema[];
 }
 
-function FileUploadDialog({ setExtractedText, setTranslatedText }: FileUploadDialogProps) {
+function FileUploadDialog({ setExtractedText, setTranslatedText, setFiles, files }: FileUploadDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +93,16 @@ function FileUploadDialog({ setExtractedText, setTranslatedText }: FileUploadDia
 
         setExtractedText(data.original.map((seg: { text: string }) => seg.text).join(' '));
         setTranslatedText(data.translated);
+        
+        const newFile: FileSchema = {
+          name: file.name,
+          data: Buffer.from(''),
+          extractedText: data.original.map((seg: { text: string }) => seg.text).join(' '),
+          translatedText: data.translated
+        };
+
+        const newFiles: FileSchema[] = [...files, newFile];
+        setFiles(newFiles);
       }
       setOpen(false);
       setUploadFiles([]);
@@ -250,23 +262,49 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
     setMessages(prev => [...prev, { message, is_user: true }]);
     
     try {
-      interface ApiResponse {
-        response: string;
-      }
+      const documentContent = showTranslated ? translatedText : extractedText;
       
-      const response = await axios.post<ApiResponse>('/api/openai', {
-        messages: [message],
+      if (!documentContent) {
+        setMessages(prev => [...prev, { 
+          message: "Please select a document first to discuss its contents.", 
+          is_user: false 
+        }]);
+        return;
+      }
+
+      const systemMessage = {
+        role: "system",
+        content: `You are analyzing the following document content:\n\n${documentContent}\n\nPlease provide insights and answer questions about this document.`
+      };
+
+      const userMessages = messages.map(msg => ({
+        role: msg.is_user ? "user" : "assistant",
+        content: msg.message
+      }));
+
+      const currentMessage = {
+        role: "user",
+        content: message
+      };
+
+      const response = await axios.post('/api/openai', {
+        messages: [systemMessage, ...userMessages, currentMessage],
         model: "gpt-3.5-turbo"
       });
 
-      if (response.data.response) {
+      const responseData = response.data as { response: string };
+      if (responseData.response) {
         setMessages(prev => [...prev, { 
-          message: response.data.response, 
+          message: responseData.response, 
           is_user: false 
         }]);
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      setMessages(prev => [...prev, { 
+        message: "Sorry, there was an error processing your request.", 
+        is_user: false 
+      }]);
     }
   };
 
@@ -314,6 +352,8 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
                   <FileUploadDialog 
                     setExtractedText={setExtractedText}
                     setTranslatedText={setTranslatedText}
+                    setFiles={setFiles}
+                    files={files}
                   />
                 </div>
               </CardHeader>
@@ -333,6 +373,7 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
                         onClick={() => {
                           setSelectedFile(index);
                           setExtractedText(file.extractedText || '');
+                          setTranslatedText(file.translatedText || '');
                         }}
                       >
                         {file.name}
