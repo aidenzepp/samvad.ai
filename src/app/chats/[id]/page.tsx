@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Navbar } from "@/components/ui/navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Panel, PanelGroup } from "react-resizable-panels";
@@ -25,33 +25,84 @@ import {
 import { toast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { useParams } from "next/navigation";
 
 interface Message {
   message: string;
   is_user: boolean;
 }
 
-function FileUploadDialog() {
-  const [open, setOpen] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
+interface FileSchema {
+  name: string;
+  data: Buffer;
+  extractedText?: string;
+  translatedText?: string;
+}
 
-  const handleFileUpload = (files: File[]) => {
-    const pdfs = files.filter(file => file.type === 'application/pdf');
+interface FileUploadDialogProps {
+  setExtractedText: (text: string) => void;
+  setTranslatedText: (text: string) => void;
+}
+
+function FileUploadDialog({ setExtractedText, setTranslatedText }: FileUploadDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const params = useParams<{ id: string }>();
+  const chatId = params?.id;
+
+  const handleFileUpload = async (files: File[]) => {
+    const validFiles = files.filter(file => 
+      file.type === 'application/pdf' || file.type.startsWith('image/')
+    );
     
-    if (pdfs.length !== files.length) {
+    if (validFiles.length !== files.length) {
       toast({
         variant: "destructive",
         title: "Invalid file type",
-        description: "Only PDF files are accepted.",
+        description: "Only PDF and image files are accepted.",
       });
     }
 
-    setFiles(prevFiles => [...prevFiles, ...pdfs]);
+    setUploadFiles(prevFiles => [...prevFiles, ...validFiles]);
   };
 
   const handleSubmit = async () => {
-    // ADD UPLOADING LOGIC!!!
-    setOpen(false);
+    setLoading(true);
+    try {
+      for (const file of uploadFiles) {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (chatId) {
+          formData.append('chatId', chatId);
+        }
+
+        const response = await fetch('/api/ocr', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to process file');
+        }
+
+        setExtractedText(data.original.map((seg: { text: string }) => seg.text).join(' '));
+        setTranslatedText(data.translated);
+      }
+      setOpen(false);
+      setUploadFiles([]);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error uploading file",
+        description: "Failed to process the file.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -85,7 +136,7 @@ function FileUploadDialog() {
                 onClick={() => {
                   const file_input = document.createElement('input');
                   file_input.type = 'file';
-                  file_input.accept = '.pdf';
+                  file_input.accept = 'application/pdf,image/*';
                   file_input.multiple = true;
                   file_input.click();
                   file_input.onchange = (e) => {
@@ -110,7 +161,7 @@ function FileUploadDialog() {
             </Label>
             <div className="col-span-3">
               <div className="flex flex-wrap gap-2">
-                {files.map((file, index) => (
+                {uploadFiles.map((file, index) => (
                   <Badge
                     key={index}
                     variant="secondary"
@@ -121,8 +172,8 @@ function FileUploadDialog() {
                       className="absolute top-0 right-0 -mt-1 -mr-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const newFiles = files.filter((_, i) => i !== index);
-                        setFiles(newFiles);
+                        const newFiles = uploadFiles.filter((_, i) => i !== index);
+                        setUploadFiles(newFiles);
                       }}
                     >
                       ×
@@ -135,8 +186,11 @@ function FileUploadDialog() {
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleSubmit}>
-            Upload
+          <AlertDialogAction 
+            onClick={handleSubmit} 
+            disabled={loading || uploadFiles.length === 0}
+          >
+            {loading ? "Uploading..." : "Upload"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -144,9 +198,37 @@ function FileUploadDialog() {
   );
 }
 
+interface ChatResponse {
+  file_group: FileSchema[];
+}
+
 export default function Chatting() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [extractedText, setExtractedText] = useState("");
+  const [selectedFile, setSelectedFile] = useState<number | null>(null);
+  const [files, setFiles] = useState<FileSchema[]>([]);
+  const [translatedText, setTranslatedText] = useState("");
+  const [showTranslated, setShowTranslated] = useState(true);
+  const params = useParams<{ id: string }>();
+
+  const chatId = params?.id;
+
+  if (!chatId) {
+    throw new Error("Chat ID is required");
+  }
+
+  useEffect(() => {
+    const loadChatData = async () => {
+      try {
+        const response = await axios.get<ChatResponse>(`/api/chats/${params.id}`);
+        setFiles(response.data.file_group);
+      } catch (error) {
+        console.error('Error loading chat data:', error);
+      }
+    };
+    
+    loadChatData();
+  }, [params.id]);
 
   const loremIpsum = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
@@ -161,7 +243,7 @@ Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium dolor
 Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.`;
 
   const toggleText = () => {
-    setExtractedText(current => current ? "" : loremIpsum);
+    setShowTranslated(prev => !prev);
   };
 
   const handleSendMessage = async (message: string) => {
@@ -188,6 +270,37 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
     }
   };
 
+  const handleFileUpload = async (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (chatId) {
+        formData.append('chatId', chatId);
+      }
+
+      interface ProcessFileResponse {
+        extractedText: string;
+      }
+
+      const response = await axios.post<ProcessFileResponse>('/api/process-file', formData);
+      
+      if (response.data.extractedText) {
+        setExtractedText(response.data.extractedText ?? '');
+        // Optionally handle translated text
+        // Update UI to show the new file in the files panel
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error processing file",
+        description: "Failed to process the uploaded file.",
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <Navbar />
@@ -198,14 +311,35 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
               <CardHeader className="p-4">
                 <div className="flex justify-between items-center">
                   <CardTitle>Files</CardTitle>
-                  <FileUploadDialog />
+                  <FileUploadDialog 
+                    setExtractedText={setExtractedText}
+                    setTranslatedText={setTranslatedText}
+                  />
                 </div>
               </CardHeader>
               <Separator />
               <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">
-                  Uploaded files go here
-                </p>
+                {files.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No files uploaded yet
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {files.map((file, index) => (
+                      <Button
+                        key={index}
+                        variant={selectedFile === index ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => {
+                          setSelectedFile(index);
+                          setExtractedText(file.extractedText || '');
+                        }}
+                      >
+                        {file.name}
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </Panel>
@@ -217,21 +351,21 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
                   <CardTitle>Extracted Text</CardTitle>
                   <div className="flex-1" />
                   <Button onClick={toggleText} variant="outline">
-                    Toggle Text
+                    Show {showTranslated ? "Original" : "Translated"}
                   </Button>
                 </div>
               </CardHeader>
               <Separator />
               <CardContent className="h-[calc(100%-7rem)] p-4">
                 <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-secondary scrollbar-track-secondary/20">
-                  {extractedText ? (
+                  {(showTranslated ? translatedText : extractedText) ? (
                     <div className="whitespace-pre-wrap break-words text-foreground leading-relaxed">
-                      {extractedText}
+                      {showTranslated ? translatedText : extractedText}
                     </div>
                   ) : (
                     <div className="h-full flex items-center justify-center">
                       <span className="text-muted-foreground">
-                        Extracted text will appear here
+                        {showTranslated ? "Translated" : "Extracted"} text will appear here
                       </span>
                     </div>
                   )}

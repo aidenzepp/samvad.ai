@@ -11,6 +11,8 @@ export interface UserSchema {
 export interface FileSchema {
   name: string
   data: Buffer
+  extractedText?: string
+  translatedText?: string
 }
 
 export interface ChatSchema {
@@ -30,6 +32,8 @@ const UserSchema = new Schema<UserSchema>({
 const FileSchema = new Schema<FileSchema>({
   name: { type: String, required: true },
   data: { type: Buffer, required: true },
+  extractedText: { type: String },
+  translatedText: { type: String },
 })
 
 const ChatSchema = new Schema<ChatSchema>({

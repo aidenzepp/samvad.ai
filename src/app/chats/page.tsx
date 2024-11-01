@@ -29,61 +29,46 @@ import { Navbar } from "@/components/ui/navbar"
 import axios from "axios"
 
 function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
-  const [open, setOpen] = useState(false);
-  const [model, setModel] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [model, setModel] = useState<string>("");
+  const [open, setOpen] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleFileUpload = async (files: File[]) => {
+    setLoading(true);
+    
     try {
-      const file_group: FileSchema[] = await Promise.all(files.map(async (file) => ({
-        name: file.name,
-        data: Buffer.from(await file.arrayBuffer()),
-      })));
-      const chat_data: ChatSchema = {
-        id: crypto.randomUUID() as UUID,
-        file_group: file_group,
-        model_name: model,
-        created_by: Cookies.get('uid') as UUID,
-        created_at: new Date(),
-      };
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('chatId', 'temp-id'); // You'll need to generate or get a proper chat ID
 
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chats`, chat_data);
-      if (response.status === 200) {
-        toast({
-          title: "Chat created successfully",
-          description: "Your chat has been created.",
+        const response = await fetch('/api/ocr', {
+          method: 'POST',
+          body: formData,
         });
-        await onSuccess();
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Failed to create chat",
-          description: "Please try again.",
-        });
+
+        if (!response.ok) {
+          throw new Error('Failed to process file');
+        }
+
+        const data = await response.json();
+        console.log('Processed file:', data);
       }
+
+      toast({
+        title: "Success",
+        description: "Files processed successfully",
+      });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Failed to create chat",
-        description: "Please try again.",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to process files",
       });
     } finally {
-      setOpen(false);
+      setLoading(false);
     }
-  };
-
-  const handleFileUpload = (files: File[]) => {
-    const pdfs = files.filter(file => file.type === 'application/pdf');
-    
-    if (pdfs.length !== files.length) {
-      toast({
-        variant: "destructive",
-        title: "Invalid file type",
-        description: "Only PDF files are accepted.",
-      });
-    }
-
-    setFiles(prevFiles => [...prevFiles, ...pdfs]);
   };
 
   return (
@@ -101,6 +86,7 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="grid gap-4 py-4">
+          {/* Model selection */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="model" className="text-right">
               Model
@@ -115,83 +101,67 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
               </SelectContent>
             </Select>
           </div>
+
+          {/* File upload section */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="files" className="text-right">
               Files
             </Label>
             <div className="col-span-3">
-              <div
-                className="border-2 border-dashed border-input rounded-lg p-6 cursor-pointer flex flex-col items-center justify-center hover:border-muted-foreground transition-colors"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const files = Array.from(e.dataTransfer.files);
+              <input 
+                type="file" 
+                accept="application/pdf,image/*" 
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
                   handleFileUpload(files);
                 }}
-                onClick={() => {
-                  const file_input = document.createElement('input');
-                  file_input.type = 'file';
-                  file_input.accept = '.pdf';
-                  file_input.multiple = true;
-                  file_input.click();
-                  file_input.onchange = (e) => {
-                    if (e.target instanceof HTMLInputElement && e.target.files) {
-                      const files = Array.from(e.target.files);
-                      handleFileUpload(files);
-                    }
-                  };
-                }}
-              >
-                <Upload className="h-6 w-6 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Click or drag files to upload
-                </p>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    handleFileUpload(files);
-                  }}
-                />
-              </div>
+                className="w-full"
+                multiple
+              />
+              {loading && <div className="text-sm text-muted-foreground mt-2">Processing files...</div>}
             </div>
           </div>
-          <Separator />
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="uploadedFiles" className="text-right">
-              <strong>Uploaded Files</strong>
-            </Label>
-            <div className="col-span-3">
-              <div className="flex flex-wrap gap-2">
-                {files.map((file, index) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="relative group"
-                  >
-                    {file.name.slice(0, 10) + (file.name.length > 10 ? "..." : "")}
-                    <span
-                      className="absolute top-0 right-0 -mt-1 -mr-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const newFiles = files.filter((_, i) => i !== index);
-                        setFiles(newFiles);
-                      }}
-                    >
-                      ×
-                    </span>
-                  </Badge>
-                ))}
+
+          {/* Display uploaded files */}
+          {files.length > 0 && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Uploaded</Label>
+              <div className="col-span-3">
+                <div className="flex flex-wrap gap-2">
+                  {files.map((file, index) => (
+                    <Badge key={index} variant="secondary" className="relative group">
+                      {file.name.slice(0, 20)}
+                      <button
+                        onClick={() => setFiles(files.filter((_, i) => i !== index))}
+                        className="ml-2 hover:text-destructive"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
+        
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleSubmit} disabled={!model}>
-            Submit
+          <AlertDialogAction
+            onClick={async () => {
+              if (!model) {
+                toast({
+                  variant: "destructive",
+                  title: "Error",
+                  description: "Please select a model",
+                });
+                return;
+              }
+              await onSuccess();
+              setOpen(false);
+            }}
+          >
+            Create
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
