@@ -262,9 +262,7 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
     setMessages(prev => [...prev, { message, is_user: true }]);
     
     try {
-      const documentContent = showTranslated ? translatedText : extractedText;
-      
-      if (!documentContent) {
+      if (!translatedText) {
         setMessages(prev => [...prev, { 
           message: "Please select a document first to discuss its contents.", 
           is_user: false 
@@ -274,7 +272,7 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
 
       const systemMessage = {
         role: "system",
-        content: `You are analyzing the following document content:\n\n${documentContent}\n\nPlease provide insights and answer questions about this document.`
+        content: `You are analyzing the following document content:\n\n${translatedText}\n\nPlease provide insights and answer questions about this document.`
       };
 
       const userMessages = messages.map(msg => ({
