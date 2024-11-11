@@ -3,7 +3,7 @@ import { Schema, model } from "mongoose";
 import { UUID } from "crypto";
 
 export interface UserSchema {
-  id: UUID
+  id: string
   username: string
   password: string
 }
@@ -29,6 +29,8 @@ const UserSchema = new Schema<UserSchema>({
   password: { type: String, required: true },
 })
 
+
+
 const FileSchema = new Schema<FileSchema>({
   name: { type: String, required: true },
   data: { type: Buffer, required: true },
@@ -44,9 +46,9 @@ const ChatSchema = new Schema<ChatSchema>({
   created_at: { type: Date, required: true },
 })
 
-export const UserObject = model<UserSchema>("User", UserSchema)
-export const FileObject = model<FileSchema>("File", FileSchema)
-export const ChatObject = model<ChatSchema>("Chat", ChatSchema)
+export const UserObject = mongoose.models.User || model<UserSchema>("User", UserSchema)
+export const FileObject = mongoose.models.File || model<FileSchema>("File", FileSchema)
+export const ChatObject = mongoose.models.Chat || model<ChatSchema>("Chat", ChatSchema)
 
 declare global {
   var mongoose: { conn: any; promise: any } | undefined;

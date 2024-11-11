@@ -11,15 +11,13 @@ interface LogoutProps {
 export const Logout: React.FC<LogoutProps> = ({ className }) => {
   const router = useRouter();
 
-  const handleLogout = () => {
-    axios
-      .get(`${process.env.NEXT_PUBLIC_API_URL}/logout`)
-      .then(() => {
-        router.push('/login');
-      })
-      .catch((error) => {
-        console.error("Error logging out:", error);
-      });
+  const handleLogout = async () => {
+    try {
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/logout`);
+      router.push('/portal');
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
   };
 
   return (
