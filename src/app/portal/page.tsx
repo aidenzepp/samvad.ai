@@ -57,6 +57,7 @@ export default function Register() {
 
     try {
       const { data: user_data }: { data: UserResponse } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+        action: "register",
         username: signUpUsername,
         password: signUpPassword,
       })
@@ -81,6 +82,7 @@ export default function Register() {
     e.preventDefault()
     try {
       const { data: user_data }: { data: UserResponse } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+        action: "login",
         username: signInUsername,
         password: signInPassword,
       })

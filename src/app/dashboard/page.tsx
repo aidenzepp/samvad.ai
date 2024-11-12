@@ -23,37 +23,57 @@ export default function Dashboard() {
 
   const handleSubmit = async () => {
     try {
-      const file_group: FileSchema[] = await Promise.all(files.map(async (file) => {
-        return { name: file.name, data: Buffer.from(await file.arrayBuffer()) };
-      }));
-      const chat_data: ChatSchema = {
-        id: crypto.randomUUID() as UUID,
-        file_group,
-        model_name: model,
-        created_by: Cookies.get('uid') as UUID,
-        created_at: new Date(),
+      const chat_data = {
+        id: crypto.randomUUID(),
+        file_group: [],
+        model_name: model || 'gpt-3.5-turbo',
+        created_by: Cookies.get('uid'),
+        created_at: new Date()
       };
 
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chats`, chat_data);
-      if (response.status === 200) {
+      const chatResponse = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chats`, chat_data);
+      
+      if (chatResponse.status === 201) {
+        let updatedFileGroup = [];
+        
+        if (files.length > 0) {
+          const fileResults = await Promise.all(files.map(async (file) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('chatId', chat_data.id);
+            
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/ocr`, formData, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            return {
+              name: file.name,
+              data: response.data.data,
+              extractedText: response.data.original.map((seg: { text: string }) => seg.text).join(' '),
+              translatedText: response.data.translated
+            };
+          }));
+
+          updatedFileGroup = fileResults;
+
+          await axios.patch(`${process.env.NEXT_PUBLIC_API_URL}/chats/${chat_data.id}`, {
+            file_group: updatedFileGroup
+          });
+        }
+
         toast({
           title: "Chat created successfully",
           description: "Redirecting to chat page...",
         });
         router.push(`/chats/${chat_data.id}`);
-      } else {
-        throw new Error("Failed to create chat");
       }
     } catch (error) {
+      console.error('Chat creation error:', error);
       toast({
         variant: "destructive",
         title: "Failed to create chat",
-        description: "Please try again.",
+        description: error.response?.data?.error || "Please try again.",
       });
-    } finally {
-      setIsDialogOpen(false);
-      setFiles([]);
-      setModel("");
     }
   };
 

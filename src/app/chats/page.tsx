@@ -27,21 +27,24 @@ import { toast } from "@/hooks/use-toast"
 import { Separator } from "@/components/ui/separator"
 import { Navbar } from "@/components/ui/navbar"
 import axios from "axios"
+import { useRouter } from "next/navigation";
 
 function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [model, setModel] = useState<string>("");
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   const handleFileUpload = async (files: File[]) => {
     setLoading(true);
     
     try {
+      const processedFiles = [];
       for (const file of files) {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('chatId', 'temp-id'); // You'll need to generate or get a proper chat ID
+        formData.append('chatId', 'temp-id');
 
         const response = await fetch('/api/ocr', {
           method: 'POST',
@@ -53,21 +56,63 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
         }
 
         const data = await response.json();
-        console.log('Processed file:', data);
+        processedFiles.push({
+          name: file.name,
+          data: data.data,
+          extractedText: data.original.map((seg: { text: string }) => seg.text).join(' '),
+          translatedText: data.translated
+        });
       }
 
+      // Save processed files to state
+      setFiles(prevFiles => [...prevFiles, ...files]);
+      
       toast({
         title: "Success",
         description: "Files processed successfully",
       });
+
+      // Return processed files for chat creation
+      return processedFiles;
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to process files",
       });
+      return [];
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateChat = async () => {
+    try {
+      const processedFiles = await handleFileUpload(files);
+      
+      const chat_data = {
+        id: crypto.randomUUID(),
+        file_group: processedFiles,
+        model_name: model || 'gpt-3.5-turbo',
+        created_by: Cookies.get('uid'),
+        created_at: new Date()
+      };
+
+      const response = await axios.post('/api/chats', chat_data);
+      
+      if (response.status === 201) {
+        toast({
+          title: "Chat created successfully",
+          description: "Redirecting to chat...",
+        });
+        router.push(`/chats/${chat_data.id}`);
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create chat",
+      });
     }
   };
 
@@ -148,18 +193,7 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={async () => {
-              if (!model) {
-                toast({
-                  variant: "destructive",
-                  title: "Error",
-                  description: "Please select a model",
-                });
-                return;
-              }
-              await onSuccess();
-              setOpen(false);
-            }}
+            onClick={handleCreateChat}
           >
             Create
           </AlertDialogAction>
@@ -174,21 +208,17 @@ export default function Chats() {
   
   const fetchChats = async () => {
     try {
-      const response = await axios.get<ChatSchema[]>(`${process.env.NEXT_PUBLIC_API_URL}/chats`);
-      if (response.status === 200) {
-        setChats(response.data);
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Failed to fetch chats",
-          description: "Please try again.",
-        });
-      }
+      const userId = Cookies.get('uid');
+      const response = await axios.get(`/api/chats`, {
+        params: { userId }
+      });
+      setChats(response.data as ChatSchema[]);
     } catch (error) {
+      console.error('Error fetching chats:', error);
       toast({
         variant: "destructive",
-        title: "Failed to fetch chats",
-        description: "Please try again.",
+        title: "Error fetching chats",
+        description: "Please try again later."
       });
     }
   };

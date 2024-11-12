@@ -73,12 +73,10 @@ function FileUploadDialog({ setExtractedText, setTranslatedText, setFiles, files
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      for (const file of uploadFiles) {
+      const processedFiles = await Promise.all(uploadFiles.map(async (file) => {
         const formData = new FormData();
         formData.append('file', file);
-        if (chatId) {
-          formData.append('chatId', chatId);
-        }
+        formData.append('chatId', chatId);
 
         const response = await fetch('/api/ocr', {
           method: 'POST',
@@ -91,19 +89,25 @@ function FileUploadDialog({ setExtractedText, setTranslatedText, setFiles, files
           throw new Error(data.error || 'Failed to process file');
         }
 
-        setExtractedText(data.original.map((seg: { text: string }) => seg.text).join(' '));
-        setTranslatedText(data.translated);
-        
-        const newFile: FileSchema = {
+        return {
           name: file.name,
-          data: Buffer.from(''),
+          data: data.data,
           extractedText: data.original.map((seg: { text: string }) => seg.text).join(' '),
           translatedText: data.translated
         };
+      }));
 
-        const newFiles: FileSchema[] = [...files, newFile];
-        setFiles(newFiles);
+      // Update local state
+      setFiles(prev => [...prev, ...processedFiles]);
+      if (processedFiles[0]?.extractedText) {
+        setExtractedText(processedFiles[0].extractedText);
       }
+
+      // Update database with all files
+      await axios.patch(`/api/chats/${chatId}`, {
+        file_group: [...files, ...processedFiles]
+      });
+
       setOpen(false);
       setUploadFiles([]);
     } catch (error) {
@@ -233,7 +237,16 @@ export default function Chatting() {
     const loadChatData = async () => {
       try {
         const response = await axios.get<ChatResponse>(`/api/chats/${params.id}`);
-        setFiles(response.data.file_group);
+        if (response.data.file_group) {
+          setFiles(response.data.file_group);
+        }
+        if (response.data.messages) {
+          setMessages(response.data.messages);
+        }
+        // Set extracted text from the first file if available
+        if (response.data.file_group?.[0]?.extractedText) {
+          setExtractedText(response.data.file_group[0].extractedText);
+        }
       } catch (error) {
         console.error('Error loading chat data:', error);
       }
@@ -259,50 +272,59 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
   };
 
   const handleSendMessage = async (message: string) => {
-    setMessages(prev => [...prev, { message, is_user: true }]);
-    
     try {
-      if (!translatedText) {
-        setMessages(prev => [...prev, { 
-          message: "Please select a document first to discuss its contents.", 
-          is_user: false 
-        }]);
-        return;
+      // First add user message to UI
+      const userMessage = { message, is_user: true, timestamp: new Date() };
+      setMessages(prev => [...prev, userMessage]);
+
+      // Save only the new user message to database
+      await axios.patch(`/api/chats/${chatId}`, {
+        messages: userMessage
+      });
+
+      // Prepare messages array for OpenAI
+      const openAIMessages = [
+        { role: 'system', content: 'You are a helpful assistant.' }
+      ];
+
+      if (extractedText) {
+        openAIMessages.push({
+          role: 'system',
+          content: `Context from uploaded files: ${extractedText}`
+        });
       }
 
-      const systemMessage = {
-        role: "system",
-        content: `You are analyzing the following document content:\n\n${translatedText}\n\nPlease provide insights and answer questions about this document.`
-      };
-
-      const userMessages = messages.map(msg => ({
-        role: msg.is_user ? "user" : "assistant",
-        content: msg.message
-      }));
-
-      const currentMessage = {
-        role: "user",
+      openAIMessages.push({
+        role: 'user',
         content: message
-      };
+      });
 
-      const response = await axios.post('/api/openai', {
-        messages: [systemMessage, ...userMessages, currentMessage],
+      const llmResponse = await axios.post('/api/openai', {
+        messages: openAIMessages,
         model: "gpt-3.5-turbo"
       });
 
-      const responseData = response.data as { response: string };
-      if (responseData.response) {
-        setMessages(prev => [...prev, { 
-          message: responseData.response, 
-          is_user: false 
-        }]);
-      }
+      // Add LLM response to UI and database
+      const aiMessage = { 
+        message: llmResponse.data.response, 
+        is_user: false, 
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
+
+      // Save only the new AI message to database
+      await axios.patch(`/api/chats/${chatId}`, {
+        messages: aiMessage
+      });
+
     } catch (error) {
-      console.error('Error sending message:', error);
-      setMessages(prev => [...prev, { 
-        message: "Sorry, there was an error processing your request.", 
-        is_user: false 
-      }]);
+      console.error('Error in chat interaction:', error);
+      toast({
+        variant: "destructive",
+        title: "Error in chat",
+        description: "Failed to process message. Please try again."
+      });
     }
   };
 
@@ -313,21 +335,28 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
     try {
       const formData = new FormData();
       formData.append('file', file);
-      if (chatId) {
-        formData.append('chatId', chatId);
-      }
+      formData.append('chatId', chatId);
 
-      interface ProcessFileResponse {
-        extractedText: string;
-      }
-
-      const response = await axios.post<ProcessFileResponse>('/api/process-file', formData);
+      const response = await axios.post('/api/process-file', formData);
       
+      const newFile = {
+        name: file.name,
+        data: response.data.data,
+        extractedText: response.data.extractedText,
+        translatedText: response.data.translatedText
+      };
+
+      // Update local state
+      setFiles(prev => [...prev, newFile]);
       if (response.data.extractedText) {
-        setExtractedText(response.data.extractedText ?? '');
-        // Optionally handle translated text
-        // Update UI to show the new file in the files panel
+        setExtractedText(response.data.extractedText);
       }
+
+      // Update in database
+      await axios.patch(`/api/chats/${chatId}`, {
+        file_group: [...files, newFile]
+      });
+
     } catch (error) {
       toast({
         variant: "destructive",
