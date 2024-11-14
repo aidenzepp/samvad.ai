@@ -2,6 +2,8 @@ import vision from '@google-cloud/vision';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.js';
 import { createCanvas } from 'canvas';
 import { v2 } from '@google-cloud/translate';
+import OpenAI from 'openai';
+
 const { Translate } = v2;
 
 /**
@@ -10,6 +12,7 @@ const { Translate } = v2;
  */
 const rawCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || '{}';
 const credentials = JSON.parse(rawCredentials);
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 /**
  * Initialize Google Cloud Vision client with credentials and project ID
@@ -36,6 +39,11 @@ interface TextSegment {
   text: string;
   page?: number;
 }
+
+// Initialize OpenAI client
+const openaiClient = new OpenAI({
+  apiKey: OPENAI_API_KEY
+});
 
 /**
  * Extracts text from a PDF buffer using PDF.js and OCR
@@ -119,13 +127,38 @@ export async function processDocument(file: File): Promise<TextSegment[]> {
   const buffer = await file.arrayBuffer();
   const fileBuffer = Buffer.from(buffer);
   
+  let segments: TextSegment[];
+  
   if (file.type === 'application/pdf') {
-    return await extractTextFromPDF(fileBuffer);
+    segments = await extractTextFromPDF(fileBuffer);
   } else if (file.type.startsWith('image/')) {
-    return await extractTextFromImage(fileBuffer);
+    segments = await extractTextFromImage(fileBuffer);
   } else {
     throw new Error(`Unsupported file type: ${file.type}`);
   }
+
+  // Group segments into logical verses/paragraphs
+  const groupedSegments = segments.reduce((acc: TextSegment[], segment) => {
+    const lastSegment = acc[acc.length - 1];
+    const currentText = segment.text.trim();
+    
+    // If text ends with common verse markers, keep as separate segment
+    if (currentText.match(/[।॥\d+॥]$/)) {
+      acc.push(segment);
+    } 
+    // If previous segment exists and doesn't end with verse markers, combine
+    else if (lastSegment && !lastSegment.text.match(/[।॥\d+॥]$/)) {
+      lastSegment.text += ' ' + currentText;
+    } 
+    // Otherwise start new segment
+    else {
+      acc.push(segment);
+    }
+    
+    return acc;
+  }, []);
+
+  return groupedSegments;
 }
 
 /**
@@ -135,25 +168,84 @@ export async function processDocument(file: File): Promise<TextSegment[]> {
  * @param target_language - Target language code
  * @returns Promise resolving to translated text
  */
-export async function translateText(text: string, target_language: string): Promise<string> {
+export async function translateTextWithGoogle(text: string, targetLanguage: string): Promise<string> {
   const translate = new Translate({ credentials, projectId: credentials.project_id });
-  const [translation] = await translate.translate(text, target_language);
+  const [translation] = await translate.translate(text, targetLanguage);
   return translation;
 }
 
-/**
- * Processes a document and translates extracted text
- * 
- * Combines document processing and translation into a single operation.
- * 
- * @param file - File to process
- * @param targetLang - Target language code for translation
- * @returns Promise resolving to object containing original and translated text
- */
-export async function processAndTranslateDocument(file: File, targetLang: string): Promise<{ original: TextSegment[], translated: string }> {
+export async function translateTextWithOpenAI(text: string, targetLanguage: string): Promise<string> {
+  const response = await openaiClient.chat.completions.create({
+    model: 'gpt-4-turbo-preview',
+    messages: [
+      {
+        role: 'system',
+        content: `Translate this text into clear ${targetLanguage}. 
+        - Preserve the original document's formatting and structure
+        - Keep proper nouns and technical terms in their original form
+        - Maintain the original text's style (formal/informal/technical/literary)
+        - Do not add explanations or commentary`
+      },
+      {
+        role: 'user',
+        content: text
+      }
+    ],
+    temperature: 0.1,
+  });
+  
+  return response.choices[0]?.message.content?.trim() || '';
+}
+
+export async function refineTranslationWithOpenAI(googleTranslation: string, originalText: string, targetLanguage: string): Promise<string> {
+  const response = await openaiClient.chat.completions.create({
+    model: 'gpt-4-turbo-preview',
+    messages: [
+      {
+        role: 'system',
+        content: `Improve this translation into natural ${targetLanguage}.
+        - Keep the original document's style and format
+        - Preserve proper nouns and technical terms
+        - Focus on clarity and readability
+        - Do not add explanations or commentary`
+      },
+      {
+        role: 'user',
+        content: googleTranslation
+      }
+    ],
+    temperature: 0.1,
+  });
+
+  return response.choices[0]?.message.content?.trim() || googleTranslation;
+}
+
+interface File {
+  arrayBuffer(): Promise<ArrayBuffer>;
+  type: string;
+}
+
+export async function processAndTranslateDocument(
+  file: File, 
+  targetLang: string, 
+  useGoogleFirst = true
+): Promise<{ original: TextSegment[], translated: string }> {
   const segments = await processDocument(file);
-  const originalText = segments.map(s => s.text).join(' ');
-  const translatedText = await translateText(originalText, targetLang);
+  
+  // Join segments preserving verse structure
+  const originalText = segments
+    .map(s => s.text.trim())
+    .filter(text => text.length > 0)
+    .join('\n\n'); // Double newline for verse separation
+
+  let translatedText: string;
+
+  if (useGoogleFirst) {
+    const googleTranslation = await translateTextWithGoogle(originalText, targetLang);
+    translatedText = await refineTranslationWithOpenAI(googleTranslation, originalText, targetLang);
+  } else {
+    translatedText = await translateTextWithOpenAI(originalText, targetLang);
+  }
   
   return {
     original: segments,
