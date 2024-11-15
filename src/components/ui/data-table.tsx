@@ -21,7 +21,7 @@ import { useState, useEffect } from 'react';
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
-  onRowSelect?: (row: TData) => void
+  onRowSelect?: (row: TData[]) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -30,6 +30,19 @@ export function DataTable<TData, TValue>({
   onRowSelect,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = useState({});
+
+  useEffect(() => {
+    const resetSelection = () => {
+      if (Object.keys(rowSelection).length > 0) {
+        setRowSelection({});
+        if (onRowSelect) {
+          onRowSelect([]);
+        }
+      }
+    };
+
+    resetSelection();
+  }, [data.length]);
 
   const table = useReactTable({
     data,
@@ -48,11 +61,9 @@ export function DataTable<TData, TValue>({
           .filter(key => newSelection[key])
           .map(key => data[parseInt(key)]);
         
-        selectedRows.forEach(row => {
-          if (onRowSelect) {
-            onRowSelect(row);
-          }
-        });
+        if (onRowSelect) {
+          onRowSelect(selectedRows);
+        }
       }
     },
   });

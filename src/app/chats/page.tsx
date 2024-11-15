@@ -226,7 +226,6 @@ export default function Chats() {
   };
 
   const handleRemoveChats = async () => {
-    console.log('handleRemoveChats called');
     if (selectedChats.length === 0) {
       toast({
         variant: "destructive",
@@ -237,33 +236,26 @@ export default function Chats() {
     }
 
     try {
+      setSelectedChats([]);
       await Promise.all(selectedChats.map(chat => 
         axios.delete(`/api/chats?id=${chat.id}`)
       ));
       toast({
         title: "Success",
-        description: "Selected chats have been deleted.",
+        description: `${selectedChats.length} chat${selectedChats.length > 1 ? 's' : ''} deleted successfully.`,
       });
-      fetchChats();
-      setSelectedChats([]);
+      await fetchChats();
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete selected chats.",
+        description: "Failed to delete one or more chats.",
       });
     }
   };
 
-  const handleRowSelect = (chat: ChatSchema) => {
-    
-    const selectedIds = new Set(selectedChats.map(c => c.id));
-    
-    if (selectedIds.has(chat.id)) {
-      setSelectedChats(prev => prev.filter(c => c.id !== chat.id));
-    } else {
-      setSelectedChats(prev => [...prev, chat]);
-    }
+  const handleRowSelect = (selectedRows: ChatSchema[]) => {
+    setSelectedChats(selectedRows);
   };
 
   useEffect(() => {
