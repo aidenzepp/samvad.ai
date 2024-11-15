@@ -172,7 +172,7 @@ export default function Dashboard() {
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setFiles([]); setModel(""); }}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSubmit} disabled={files.length === 0}>Submit</AlertDialogAction>
+            <AlertDialogAction onClick={handleSubmit}>Submit</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

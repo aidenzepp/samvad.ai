@@ -41,14 +41,18 @@ export function DataTable<TData, TValue>({
     },
     onRowSelectionChange: (updater) => {
       setRowSelection(updater);
+      
       if (typeof updater === 'function') {
         const newSelection = updater(rowSelection);
-        const changedIndex = Object.keys(newSelection).find(
-          key => !rowSelection[key] || !newSelection[key]
-        );
-        if (changedIndex !== undefined && onRowSelect) {
-          onRowSelect(data[parseInt(changedIndex)]);
-        }
+        const selectedRows = Object.keys(newSelection)
+          .filter(key => newSelection[key])
+          .map(key => data[parseInt(key)]);
+        
+        selectedRows.forEach(row => {
+          if (onRowSelect) {
+            onRowSelect(row);
+          }
+        });
       }
     },
   });

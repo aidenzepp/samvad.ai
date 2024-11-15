@@ -457,7 +457,7 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
             </Card>
           </Panel>
           <ResizeHandle />
-          <Panel minSize={30} defaultSize={42.5}>
+          <Panel minSize={30} defaultSize={40}>
             <Card className="h-full rounded-none border-border">
               <CardHeader className="p-4">
                 <div className="flex items-center">
@@ -487,7 +487,7 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
             </Card>
           </Panel>
           <ResizeHandle />
-          <Panel minSize={30} defaultSize={42.5}>
+          <Panel minSize={30} defaultSize={40}>
             <Card className="h-full rounded-none border-border">
               <CardHeader>
                 <CardTitle>Chat</CardTitle>
