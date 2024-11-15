@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/tabs"
 import { toast } from "@/hooks/use-toast"
 import { UserResponse } from "@/lib/response"
+import { ModeToggle } from "@/components/mode-toggle"
 
 export default function Register() {
   const [signUpUsername, setSignUpUsername] = useState("")
@@ -92,7 +93,7 @@ export default function Register() {
           title: "Signed in",
           description: "You have successfully signed in",
         })
-        router.push('/chats')
+        router.push('/dashboard')
       }
     } catch (error) {
       toast({
@@ -104,95 +105,101 @@ export default function Register() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Tabs defaultValue="signup" className="w-[400px]">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          <TabsTrigger value="signin">Sign In</TabsTrigger>
-        </TabsList>
-        <TabsContent value="signup">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sign Up</CardTitle>
-              <CardDescription>
-                Create a new account. All fields are required.
-              </CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSignUp}>
-              <CardContent className="space-y-2">
-                <div className="space-y-1">
-                  <Label htmlFor="signUpUsername">Username</Label>
-                  <Input 
-                    id="signUpUsername" 
-                    value={signUpUsername}
-                    onChange={(e) => setSignUpUsername(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="signUpPassword">Password</Label>
-                  <Input 
-                    id="signUpPassword" 
-                    type="password"
-                    value={signUpPassword}
-                    onChange={(e) => setSignUpPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="signUpConfirmPassword">Re-enter Password</Label>
-                  <Input 
-                    id="signUpConfirmPassword" 
-                    type="password"
-                    value={signUpConfirmPassword}
-                    onChange={(e) => setSignUpConfirmPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button type="submit">Sign Up</Button>
-              </CardFooter>
-            </form>
-          </Card>
-        </TabsContent>
-        <TabsContent value="signin">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sign In</CardTitle>
-              <CardDescription>
-                Sign in to your existing account.
-              </CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSignIn}>
-              <CardContent className="space-y-2">
-                <div className="space-y-1">
-                  <Label htmlFor="signInUsername">Username</Label>
-                  <Input 
-                    id="signInUsername"
-                    value={signInUsername}
-                    onChange={(e) => setSignInUsername(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="signInPassword">Password</Label>
-                  <Input 
-                    id="signInPassword" 
-                    type="password"
-                    value={signInPassword}
-                    onChange={(e) => setSignInPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button type="submit">Sign In</Button>
-              </CardFooter>
-            </form>
-          </Card>
-        </TabsContent>
-      </Tabs>
+    <div className="min-h-screen relative">
+      <div className="absolute top-4 right-4">
+        <ModeToggle />
+      </div>
+
+      <div className="flex items-center justify-center min-h-screen">
+        <Tabs defaultValue="signup" className="w-[400px]">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsTrigger value="signin">Sign In</TabsTrigger>
+          </TabsList>
+          <TabsContent value="signup">
+            <Card>
+              <CardHeader>
+                <CardTitle>Sign Up</CardTitle>
+                <CardDescription>
+                  Create a new account. All fields are required.
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={handleSignUp}>
+                <CardContent className="space-y-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="signUpUsername">Username</Label>
+                    <Input 
+                      id="signUpUsername" 
+                      value={signUpUsername}
+                      onChange={(e) => setSignUpUsername(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="signUpPassword">Password</Label>
+                    <Input 
+                      id="signUpPassword" 
+                      type="password"
+                      value={signUpPassword}
+                      onChange={(e) => setSignUpPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="signUpConfirmPassword">Re-enter Password</Label>
+                    <Input 
+                      id="signUpConfirmPassword" 
+                      type="password"
+                      value={signUpConfirmPassword}
+                      onChange={(e) => setSignUpConfirmPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit">Sign Up</Button>
+                </CardFooter>
+              </form>
+            </Card>
+          </TabsContent>
+          <TabsContent value="signin">
+            <Card>
+              <CardHeader>
+                <CardTitle>Sign In</CardTitle>
+                <CardDescription>
+                  Sign in to your existing account.
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={handleSignIn}>
+                <CardContent className="space-y-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="signInUsername">Username</Label>
+                    <Input 
+                      id="signInUsername"
+                      value={signInUsername}
+                      onChange={(e) => setSignInUsername(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="signInPassword">Password</Label>
+                    <Input 
+                      id="signInPassword" 
+                      type="password"
+                      value={signInPassword}
+                      onChange={(e) => setSignInPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit">Sign In</Button>
+                </CardFooter>
+              </form>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }

@@ -7,7 +7,7 @@ import { Panel, PanelGroup } from "react-resizable-panels";
 import ResizeHandle from "@/components/ui/resize-handle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Upload } from "lucide-react";
+import { Upload, Trash2 } from "lucide-react";
 import { ChatBubble } from "@/components/chat-bubble";
 import { ChatInput } from "@/components/chat-input";
 import axios from "axios";
@@ -366,12 +366,41 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
     }
   };
 
+  const handleDeleteFile = async (index: number) => {
+    try {
+      const updatedFiles = files.filter((_, i) => i !== index);
+      
+      await axios.patch(`/api/chats/${chatId}`, {
+        file_group: updatedFiles
+      });
+
+      setFiles(updatedFiles);
+      
+      if (selectedFile === index) {
+        setSelectedFile(null);
+        setExtractedText('');
+        setTranslatedText('');
+      }
+
+      toast({
+        title: "Success",
+        description: "File removed successfully",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to remove file",
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <Navbar />
       <div className="flex-1 overflow-hidden">
         <PanelGroup direction="horizontal" className="h-full">
-          <Panel minSize={15} maxSize={20} defaultSize={15}>
+          <Panel minSize={15} maxSize={25} defaultSize={20}>
             <Card className="h-full rounded-none border-border">
               <CardHeader className="p-4">
                 <div className="flex justify-between items-center">
@@ -393,18 +422,34 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
                 ) : (
                   <div className="space-y-2">
                     {files.map((file, index) => (
-                      <Button
+                      <div
                         key={index}
-                        variant={selectedFile === index ? "secondary" : "ghost"}
-                        className="w-full justify-start"
-                        onClick={() => {
-                          setSelectedFile(index);
-                          setExtractedText(file.extractedText || '');
-                          setTranslatedText(file.translatedText || '');
-                        }}
+                        className="group relative flex items-center space-x-2"
                       >
-                        {file.name}
-                      </Button>
+                        <Button
+                          variant={selectedFile === index ? "secondary" : "ghost"}
+                          className="w-full justify-start pr-10"
+                          title={file.name}
+                          onClick={() => {
+                            setSelectedFile(index);
+                            setExtractedText(file.extractedText || '');
+                            setTranslatedText(file.translatedText || '');
+                          }}
+                        >
+                          <span className="truncate max-w-[160px]">{file.name}</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive/50 hover:text-destructive hover:bg-transparent"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteFile(index);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     ))}
                   </div>
                 )}

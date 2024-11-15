@@ -93,8 +93,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         break;
 
+      case 'DELETE':
+        try {
+          const { id } = req.query;
+          if (!id) {
+            return res.status(400).json({ error: 'Chat ID is required' });
+          }
+
+          const result = await ChatObject.deleteOne({ id: id });
+          if (result.deletedCount === 0) {
+            return res.status(404).json({ error: 'Chat not found' });
+          }
+
+          return res.status(204).end();
+        } catch (error) {
+          console.error('DELETE Error:', error);
+          return res.status(500).json({ error: 'Unable to delete chat' });
+        }
+        break;
+
       default:
-        res.setHeader('Allow', ['GET', 'POST']);
+        res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
         return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
   } catch (error) {

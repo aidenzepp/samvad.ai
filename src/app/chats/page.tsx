@@ -194,8 +194,9 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleCreateChat}
+            disabled={loading}
           >
-            Create
+            {loading ? "Processing files..." : "Create"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -205,7 +206,8 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
 
 export default function Chats() {
   const [chats, setChats] = useState<ChatSchema[]>([]);
-  
+  const [selectedChats, setSelectedChats] = useState<ChatSchema[]>([]);
+
   const fetchChats = async () => {
     try {
       const userId = Cookies.get('uid');
@@ -220,6 +222,47 @@ export default function Chats() {
         title: "Error fetching chats",
         description: "Please try again later."
       });
+    }
+  };
+
+  const handleRemoveChats = async () => {
+    console.log('handleRemoveChats called');
+    if (selectedChats.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No chats selected",
+        description: "Please select chats to delete.",
+      });
+      return;
+    }
+
+    try {
+      await Promise.all(selectedChats.map(chat => 
+        axios.delete(`/api/chats?id=${chat.id}`)
+      ));
+      toast({
+        title: "Success",
+        description: "Selected chats have been deleted.",
+      });
+      fetchChats();
+      setSelectedChats([]);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete selected chats.",
+      });
+    }
+  };
+
+  const handleRowSelect = (chat: ChatSchema) => {
+    
+    const selectedIds = new Set(selectedChats.map(c => c.id));
+    
+    if (selectedIds.has(chat.id)) {
+      setSelectedChats(prev => prev.filter(c => c.id !== chat.id));
+    } else {
+      setSelectedChats(prev => [...prev, chat]);
     }
   };
 
@@ -244,14 +287,18 @@ export default function Chats() {
               <Button 
                 variant="outline" 
                 size="icon" 
-                onClick={fetchChats}
+                onClick={handleRemoveChats}
               >
                 <Minus className="h-4 w-4" />
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <DataTable columns={columns} data={chats} />
+            <DataTable 
+              columns={columns} 
+              data={chats} 
+              onRowSelect={handleRowSelect}
+            />
           </CardContent>
         </Card>
       </div>
