@@ -255,18 +255,6 @@ export default function Chatting() {
     loadChatData();
   }, [params.id]);
 
-  const loremIpsum = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
-Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-
-Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
-Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-
-Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.`;
-
   const toggleText = () => {
     setShowTranslated(prev => !prev);
   };
@@ -324,44 +312,6 @@ Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed 
         variant: "destructive",
         title: "Error in chat",
         description: "Failed to process message. Please try again."
-      });
-    }
-  };
-
-  const handleFileUpload = async (files: File[]) => {
-    const file = files[0];
-    if (!file) return;
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('chatId', chatId);
-
-      const response = await axios.post('/api/process-file', formData);
-      
-      const newFile = {
-        name: file.name,
-        data: response.data.data,
-        extractedText: response.data.extractedText,
-        translatedText: response.data.translatedText
-      };
-
-      // Update local state
-      setFiles(prev => [...prev, newFile]);
-      if (response.data.extractedText) {
-        setExtractedText(response.data.extractedText);
-      }
-
-      // Update in database
-      await axios.patch(`/api/chats/${chatId}`, {
-        file_group: [...files, newFile]
-      });
-
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error processing file",
-        description: "Failed to process the uploaded file.",
       });
     }
   };

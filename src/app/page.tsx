@@ -27,7 +27,7 @@ export default function Home() {
               Join now
             </Button>
           </Link>
-          <Link href="/portal" passHref>
+          <Link href="/portal?tab=signin" passHref>
             <Button 
               size="lg"
               variant="secondary"

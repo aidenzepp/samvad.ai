@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send } from "lucide-react";
-import { Lightbulb } from "lucide-react";
+import { Send, Lightbulb } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -13,6 +14,7 @@ interface ChatInputProps {
 export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
   const [message, setMessage] = useState("");
   const [showPrompts, setShowPrompts] = useState(false);
+  const [autoSubmit, setAutoSubmit] = useState(true);
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(e.target.value);
@@ -30,6 +32,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
       e.preventDefault();
       handleMessageSubmit();
     }
+  };
+
+  const handlePromptClick = (prompt: string) => {
+    if (autoSubmit) {
+      onSendMessage(prompt);
+    } else {
+      setMessage(prompt);
+    }
+    setShowPrompts(false);
   };
 
   const suggestedPrompts = [
@@ -58,15 +69,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
       {/* Suggested prompts dropdown */}
       {showPrompts && (
         <div className="bg-gray-100 dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 p-2 rounded-md shadow">
+          <div className="flex items-center justify-between mb-2 pb-2 border-b">
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={autoSubmit}
+                onCheckedChange={setAutoSubmit}
+                id="auto-submit"
+              />
+              <Label htmlFor="auto-submit">Auto-submit prompts</Label>
+            </div>
+          </div>
           <ul className="space-y-1">
             {suggestedPrompts.map((prompt, index) => (
               <li
                 key={index}
                 className="cursor-pointer hover:bg-gray-200 dark:hover:bg-zinc-600 p-1 rounded"
-                onClick={() => {
-                  setMessage(prompt);
-                  setShowPrompts(false);
-                }}
+                onClick={() => handlePromptClick(prompt)}
               >
                 {prompt}
               </li>
