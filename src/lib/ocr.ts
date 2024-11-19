@@ -34,10 +34,16 @@ if (typeof window === 'undefined') {
  * Interface representing a segment of extracted text
  * @property text - The extracted text content
  * @property page - Optional page number for PDF documents
+ * @property id - Unique ID for referencing
  */
 interface TextSegment {
   text: string;
+  id: string;
   page?: number;
+  boundingBox?: {
+    x: number;
+    y: number;
+  }[];
 }
 
 // Initialize OpenAI client
@@ -96,15 +102,25 @@ export async function extractTextFromPDF(pdfBuffer: Buffer): Promise<TextSegment
  * @returns Promise resolving to array of text segments
  */
 export async function extractTextFromImage(image: Buffer): Promise<TextSegment[]> {
-  const [result] = await visionClient.textDetection(image);
+  const [result] = await visionClient.textDetection({
+    image: { content: image },
+    imageContext: {
+      languageHints: ['sa']
+    }
+  });
   
   if (!result.textAnnotations || result.textAnnotations.length === 0) {
     return [];
   }
   
-  // Skip first annotation which contains all text, map remaining individual text blocks
-  return result.textAnnotations.slice(1).map(annotation => ({
+  // Get text blocks with their positions
+  return result.textAnnotations.slice(1).map((annotation, index) => ({
     text: annotation.description || '',
+    id: `segment-${index}`,
+    boundingBox: annotation.boundingPoly?.vertices?.map(vertex => ({
+      x: vertex.x || 0,
+      y: vertex.y || 0
+    })) || []
   }));
 }
 
@@ -127,38 +143,13 @@ export async function processDocument(file: File): Promise<TextSegment[]> {
   const buffer = await file.arrayBuffer();
   const fileBuffer = Buffer.from(buffer);
   
-  let segments: TextSegment[];
-  
   if (file.type === 'application/pdf') {
-    segments = await extractTextFromPDF(fileBuffer);
+    return await extractTextFromPDF(fileBuffer);
   } else if (file.type.startsWith('image/')) {
-    segments = await extractTextFromImage(fileBuffer);
+    return await extractTextFromImage(fileBuffer);
   } else {
     throw new Error(`Unsupported file type: ${file.type}`);
   }
-
-  // Group segments into logical verses/paragraphs
-  const groupedSegments = segments.reduce((acc: TextSegment[], segment) => {
-    const lastSegment = acc[acc.length - 1];
-    const currentText = segment.text.trim();
-    
-    // If text ends with common verse markers, keep as separate segment
-    if (currentText.match(/[।॥\d+॥]$/)) {
-      acc.push(segment);
-    } 
-    // If previous segment exists and doesn't end with verse markers, combine
-    else if (lastSegment && !lastSegment.text.match(/[।॥\d+॥]$/)) {
-      lastSegment.text += ' ' + currentText;
-    } 
-    // Otherwise start new segment
-    else {
-      acc.push(segment);
-    }
-    
-    return acc;
-  }, []);
-
-  return groupedSegments;
 }
 
 /**
@@ -184,6 +175,8 @@ export async function translateTextWithOpenAI(text: string, targetLanguage: stri
         - Preserve the original document's formatting and structure
         - Keep proper nouns and technical terms in their original form
         - Maintain the original text's style (formal/informal/technical/literary)
+        - Preserve ALL line breaks from the original text
+        - Maintain paragraph structure and spacing
         - Do not add explanations or commentary`
       },
       {
@@ -204,17 +197,25 @@ export async function refineTranslationWithOpenAI(googleTranslation: string, ori
       {
         role: 'system',
         content: `Improve this translation into natural ${targetLanguage}.
-        - Keep the original document's style and format
-        - Preserve proper nouns and technical terms
-        - Focus on clarity and readability
-        - Do not add explanations or commentary`
+        - Use the original text for context and structure
+        - Maintain coherent sentences and paragraphs
+        - Keep proper nouns and technical terms in their original form
+        - Ensure logical flow between segments
+        - Preserve line breaks only where they make semantic sense
+        - Do not add commentary or explanations about the text structure`
       },
       {
         role: 'user',
-        content: googleTranslation
+        content: `Original text:
+${originalText}
+
+Google's translation:
+${googleTranslation}
+
+Please provide an improved, coherent translation that maintains the original's meaning and flow. Do not add any commentary or explanations about the text or its structure.`
       }
     ],
-    temperature: 0.1,
+    temperature: 0.3,
   });
 
   return response.choices[0]?.message.content?.trim() || googleTranslation;
@@ -232,23 +233,55 @@ export async function processAndTranslateDocument(
 ): Promise<{ original: TextSegment[], translated: string }> {
   const segments = await processDocument(file);
   
-  // Join segments preserving verse structure
-  const originalText = segments
-    .map(s => s.text.trim())
-    .filter(text => text.length > 0)
-    .join('\n\n'); // Double newline for verse separation
+  // Join segments preserving natural text blocks
+  const chunkedText = segments
+    .reduce((chunks: string[], segment, index, array) => {
+      const currentChunk = chunks[chunks.length - 1];
+      const newText = segment.text.trim();
+      
+      // Start new chunk if size limit reached
+      if (!currentChunk || (currentChunk.length + newText.length) > 1500) {
+        chunks.push(newText);
+      } else {
+        // Join with space or newline based on position
+        const currentY = segment.boundingBox?.[0]?.y || 0;
+        const nextY = array[index + 1]?.boundingBox?.[0]?.y || 0;
+        const separator = Math.abs(nextY - currentY) > 10 ? '\n' : ' '; 
+        // CHANGE THIS. EXPERIMENT WITH SEPARATOR. CAN BE DIFFERNET FOR EACH DOCUMENT...
+        chunks[chunks.length - 1] = currentChunk + separator + newText;
+      }
+      return chunks;
+    }, []);
 
-  let translatedText: string;
+  // Clean up translation artifacts
+  const cleanTranslation = (text: string): string => {
+    return text
+      .replace(/it appears|without additional context|there is no content/gi, '')
+      .replace(/\([^)]*\)/g, '')
+      .replace(/which is simply|possibly indicating/gi, '')
+      .trim();
+  };
 
-  if (useGoogleFirst) {
-    const googleTranslation = await translateTextWithGoogle(originalText, targetLang);
-    translatedText = await refineTranslationWithOpenAI(googleTranslation, originalText, targetLang);
-  } else {
-    translatedText = await translateTextWithOpenAI(originalText, targetLang);
-  }
+  // Translate each chunk
+  let translatedChunks: string[] = [];
   
+  for (const chunk of chunkedText) {
+    if (useGoogleFirst) {
+      const googleTranslation = await translateTextWithGoogle(chunk, targetLang);
+      const refinedTranslation = await refineTranslationWithOpenAI(
+        googleTranslation, 
+        chunk,
+        targetLang
+      );
+      translatedChunks.push(cleanTranslation(refinedTranslation));
+    } else {
+      const translation = await translateTextWithOpenAI(chunk, targetLang);
+      translatedChunks.push(cleanTranslation(translation));
+    }
+  }
+
   return {
     original: segments,
-    translated: translatedText
+    translated: translatedChunks.join('\n')
   };
 }

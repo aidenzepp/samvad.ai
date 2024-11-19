@@ -34,7 +34,7 @@ interface Message {
 
 interface FileSchema {
   name: string;
-  data: Buffer;
+  data: any;
   extractedText?: string;
   translatedText?: string;
 }
@@ -89,16 +89,24 @@ function FileUploadDialog({ setExtractedText, setTranslatedText, setFiles, files
           throw new Error(data.error || 'Failed to process file');
         }
 
-        return {
+        const fileData: FileSchema = {
           name: file.name,
           data: data.data,
-          extractedText: data.original.map((seg: { text: string }) => seg.text).join(' '),
+          extractedText: data.original
+            .reduce((text: string, segment: { boundingBox: { y: number; }[]; text: string; }, index: number, array: any[]) => {
+              const currentY = segment.boundingBox?.[0]?.y || 0;
+              const nextY = array[index + 1]?.boundingBox?.[0]?.y || 0;
+              const separator = Math.abs(nextY - currentY) > 30 ? '\n' : ' '; 
+              // CHANGE THIS. EXPERIMENT WITH SEPARATOR. CAN BE DIFFERNET FOR EACH DOCUMENT...
+              return text + segment.text.trim() + (index < array.length - 1 ? separator : '');
+            }, ''),
           translatedText: data.translated
         };
-      }));
 
+        return fileData;
+      }));
       // Update local state
-      setFiles(prev => [...prev, ...processedFiles]);
+      setFiles([...files, ...processedFiles]);
       if (processedFiles[0]?.extractedText) {
         setExtractedText(processedFiles[0].extractedText);
       }
@@ -422,8 +430,14 @@ export default function Chatting() {
               <CardContent className="h-[calc(100%-7rem)] p-4">
                 <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-secondary scrollbar-track-secondary/20">
                   {(showTranslated ? translatedText : extractedText) ? (
-                    <div className="whitespace-pre-wrap break-words text-foreground leading-relaxed">
-                      {showTranslated ? translatedText : extractedText}
+                    <div className="font-mono">
+                      {(showTranslated ? translatedText : extractedText)
+                        .split('\n')
+                        .map((segment, index) => (
+                          <p key={index} className="mb-2">
+                            {segment.trim()}
+                          </p>
+                        ))}
                     </div>
                   ) : (
                     <div className="h-full flex items-center justify-center">
