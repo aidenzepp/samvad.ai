@@ -3,24 +3,43 @@
 import React, { useState } from "react";
 import { PlusIcon, MessageSquare, Upload } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Navbar } from "@/components/ui/navbar";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { UUID } from "crypto";
 import Cookies from "js-cookie";
-import { ChatSchema, FileSchema} from "@/lib/mongodb";
 import axios from "axios";
 
+/**
+ * Dashboard component that provides chat creation and file upload functionality
+ * 
+ * This component serves as the main dashboard interface, allowing users to:
+ * - View existing chats
+ * - Create new chats with different AI models (GPT-4 or Claude 3.5)
+ * - Upload and manage PDF files for chat context
+ * - Navigate between different sections of the application
+ *
+ * @component
+ * @returns {React.ReactElement} A dashboard interface with chat creation capabilities
+ */
 export default function Dashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [model, setModel] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const router = useRouter();
 
+  /**
+   * Handles the submission of a new chat creation
+   * 
+   * Creates a new chat with the selected model and uploaded files.
+   * Processes any uploaded files through OCR and updates the chat with file data.
+   * Redirects to the new chat page on success.
+   *
+   * @returns {Promise<void>}
+   */
   const handleSubmit = async () => {
     try {
       const chat_data = {
@@ -77,6 +96,15 @@ export default function Dashboard() {
     }
   };
 
+  /**
+   * Handles file upload functionality
+   * 
+   * Validates uploaded files to ensure they are PDFs and adds them to the state.
+   * Displays error messages for invalid file types.
+   *
+   * @param {File[]} uploadedFiles - Array of files selected by the user
+   * @returns {Promise<void>}
+   */
   const handleFileUpload = async (uploadedFiles: File[]) => {
     const pdfs = uploadedFiles.filter(file => file.type === 'application/pdf');
     
@@ -180,6 +208,22 @@ export default function Dashboard() {
   );
 }
 
+/**
+ * ChatButton component that renders either a button or a link with consistent styling
+ * 
+ * This component creates a large, card-like button that can either function as
+ * a clickable button or a navigation link. It includes an icon and label,
+ * with hover effects and consistent styling across both button and link variants.
+ *
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} props.label - Text to display under the icon
+ * @param {Function} [props.onClick] - Click handler for button variant
+ * @param {boolean} [props.isLink=false] - Whether to render as a link instead of button
+ * @param {React.ElementType} [props.icon=PlusIcon] - Icon component to display
+ * @param {string} [props.href=""] - URL for link variant
+ * @returns {React.ReactElement} A styled button or link component
+ */
 function ChatButton({ 
   label, 
   onClick, 

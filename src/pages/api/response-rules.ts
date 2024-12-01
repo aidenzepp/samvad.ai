@@ -1,3 +1,13 @@
+/**
+ * Provides custom predefined responses for common user inputs.
+ * 
+ * This function checks the user's input against a set of common queries and returns
+ * appropriate predefined responses. It helps maintain consistent messaging for
+ * frequently asked questions while allowing fallback to GPT for more complex queries.
+ *
+ * @param userInput - The raw input string from the user
+ * @returns A predefined response string if a match is found, null otherwise
+ */
 export const getCustomResponse = (userInput: string): string | null => {
   const lowerInput = userInput.toLowerCase().trim();
 

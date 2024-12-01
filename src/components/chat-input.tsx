@@ -7,19 +7,43 @@ import { Send, Lightbulb } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
+/**
+ * Props interface for the ChatInput component
+ * 
+ * @interface ChatInputProps
+ * @property {function} onSendMessage - Callback function to handle sending messages
+ */
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
 }
 
+/**
+ * ChatInput component that provides a text input interface with suggested prompts
+ * 
+ * This component renders a textarea for message input along with a send button.
+ * It also includes a suggested prompts feature that can be toggled to show
+ * preset message options.
+ *
+ * @component
+ * @param {ChatInputProps} props - The component props
+ */
 export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
   const [message, setMessage] = useState("");
   const [showPrompts, setShowPrompts] = useState(false);
   const [autoSubmit, setAutoSubmit] = useState(true);
 
+  /**
+   * Handles changes to the message input textarea
+   * @param {React.ChangeEvent<HTMLTextAreaElement>} e - The change event
+   */
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(e.target.value);
   };
 
+  /**
+   * Handles message submission when the send button is clicked
+   * Sends the message if it's not empty and resets the input
+   */
   const handleMessageSubmit = () => {
     if (message.trim()) {
       onSendMessage(message);
@@ -27,6 +51,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
     }
   };
 
+  /**
+   * Handles keyboard events in the textarea
+   * Submits the message on Enter key (without Shift)
+   * @param {React.KeyboardEvent<HTMLTextAreaElement>} e - The keyboard event
+   */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -34,6 +63,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
     }
   };
 
+  /**
+   * Handles clicks on suggested prompts
+   * Either sends the prompt immediately or sets it as the current message
+   * based on autoSubmit setting
+   * @param {string} prompt - The selected prompt text
+   */
   const handlePromptClick = (prompt: string) => {
     if (autoSubmit) {
       onSendMessage(prompt);
@@ -43,6 +78,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
     setShowPrompts(false);
   };
 
+  /**
+   * Array of predefined prompts that users can quickly select
+   */
   const suggestedPrompts = [
     "Can you summarize the key points of this document?",
     "What is the tone of the document?",

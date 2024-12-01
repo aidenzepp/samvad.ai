@@ -5,6 +5,21 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 
+/**
+ * Home page component that serves as the landing page for Samvad.ai
+ * 
+ * This component renders a responsive landing page with a centered layout featuring
+ * the application name and two main call-to-action buttons - one for new user registration
+ * and another for existing user sign-in. It also includes a theme toggle component
+ * in the top-right corner for switching between light and dark modes.
+ *
+ * The layout is mobile-responsive, switching between column and row layouts for the
+ * buttons based on screen size. The component uses Next.js Link components for
+ * client-side navigation and integrates with the application's theming system.
+ *
+ * @component
+ * @returns {React.ReactElement} A styled landing page with registration and login options
+ */
 export default function Home() {
   
   return (

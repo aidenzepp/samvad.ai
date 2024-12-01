@@ -1,7 +1,6 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
 import { Logout } from './logout';
 import { Menu, Grid, MessageSquare, Star } from 'lucide-react';
 import {
@@ -13,6 +12,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ModeToggle } from "@/components/mode-toggle";
 
+/**
+ * Navigation bar component that provides the main navigation interface
+ * 
+ * This component renders a responsive navigation bar with a dropdown menu for main navigation,
+ * branding elements, and theme toggle functionality. It includes links to key application
+ * areas like Dashboard, Chats, and Credits, as well as a logout option.
+ *
+ * The navbar is styled consistently with the application's theme and includes hover states
+ * and transitions for interactive elements. It uses next/navigation for client-side routing
+ * and integrates with the theme system.
+ *
+ * @component
+ * @returns {React.ReactElement} A styled navigation bar with dropdown menu and theme toggle
+ *
+ * @example
+ * ```tsx
+ * <Navbar />
+ * ```
+ */
 export function Navbar() {
   const pathname = usePathname();
 
@@ -73,6 +91,22 @@ export function Navbar() {
   );
 }
 
+/**
+ * Custom brain icon component used as the application logo
+ * 
+ * This component renders a custom SVG brain icon that serves as the main logo
+ * for the application. It inherits color from its parent and supports all standard
+ * SVG props for customization.
+ *
+ * @component
+ * @param {React.SVGProps<SVGSVGElement>} props - Standard SVG element props
+ * @returns {React.ReactElement} An SVG icon of a brain
+ *
+ * @example
+ * ```tsx
+ * <BrainIcon className="h-6 w-6" />
+ * ```
+ */
 function BrainIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg

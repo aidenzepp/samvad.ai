@@ -9,7 +9,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
- 
+
+/**
+ * ModeToggle component that provides theme switching functionality
+ * 
+ * This component renders a dropdown menu with options to switch between light, dark,
+ * and system color themes. It uses the next-themes library for theme management and
+ * displays animated sun/moon icons to indicate the current theme state.
+ *
+ * The dropdown trigger shows a sun icon in light mode and moon icon in dark mode,
+ * with smooth transition animations between states. The menu provides three options:
+ * - Light: Forces light theme
+ * - Dark: Forces dark theme 
+ * - System: Uses system preferences
+ *
+ * @component
+ * @returns {React.ReactElement} A dropdown menu for theme switching
+ *
+ * @example
+ * ```tsx
+ * <ModeToggle />
+ * ```
+ */
 export function ModeToggle() {
   const { setTheme } = useTheme()
  

@@ -2,6 +2,17 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { connectToMongoDB, getModels } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
+/**
+ * API handler for managing chat operations (create, read, delete)
+ * 
+ * Supports the following operations:
+ * - GET: Retrieve all chats for a specific user
+ * - POST: Create a new chat
+ * - DELETE: Remove an existing chat
+ * 
+ * @param req - Next.js API request object
+ * @param res - Next.js API response object
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     console.log('Connecting to MongoDB...');
@@ -17,6 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ error: 'User ID is required' });
           }
           
+          // Query chats by user ID, supporting both string IDs and ObjectIDs
           const chats = await ChatObject.find({
             created_by: {
               $in: [
@@ -47,6 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             });
           }
 
+          // Verify user exists before creating chat
           console.log('Looking up user:', created_by);
           const user = await UserObject.findOne({
             $or: [
@@ -100,6 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ error: 'Chat ID is required' });
           }
 
+          // Attempt to delete chat and handle case where chat doesn't exist
           const result = await ChatObject.deleteOne({ id: id });
           if (result.deletedCount === 0) {
             return res.status(404).json({ error: 'Chat not found' });

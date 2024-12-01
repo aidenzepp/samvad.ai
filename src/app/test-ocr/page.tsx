@@ -2,11 +2,31 @@
 
 import { useState } from 'react';
 
+/**
+ * TestOCR component that provides OCR (Optical Character Recognition) functionality
+ * 
+ * This component allows users to upload PDF documents or images for OCR processing.
+ * It handles file uploads, displays processing status, and shows both the original
+ * extracted text and its translation side by side. The component includes error handling
+ * and loading states for a better user experience.
+ *
+ * @component
+ * @returns {React.ReactElement} A form for OCR processing with results display
+ */
 export default function TestOCR() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ original: { text: string }[], translated: string } | null>(null);
 
+  /**
+   * Handles file upload and OCR processing
+   * 
+   * This function processes the uploaded file through the OCR API endpoint.
+   * It manages loading states, error handling, and updates the UI with results.
+   * 
+   * @param {React.ChangeEvent<HTMLInputElement>} e - The file input change event
+   * @returns {Promise<void>}
+   */
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;

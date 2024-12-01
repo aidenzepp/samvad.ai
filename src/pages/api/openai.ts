@@ -2,6 +2,17 @@ import { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
 import { getCustomResponse } from "./response-rules";
 
+/**
+ * API handler for OpenAI chat completion requests.
+ * 
+ * Processes incoming chat messages and generates AI responses using OpenAI's API.
+ * Supports both array-based message formats and single message strings.
+ * Only accepts POST requests.
+ *
+ * @param req - Next.js API request object containing messages and optional model selection
+ * @param res - Next.js API response object
+ * @returns JSON response with either the AI-generated reply or error details
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -23,6 +34,11 @@ export default async function handler(
       throw new Error('Messages must be an array');
     }
 
+    /**
+     * Transforms and validates incoming messages into the proper OpenAI chat format.
+     * Handles various input formats including strings and objects.
+     * Filters out invalid messages and ensures proper role assignment.
+     */
     const conversationMessages = messages.map((message) => {
       if (message && typeof message === 'object' && 
           'role' in message && 'content' in message &&

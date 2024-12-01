@@ -25,8 +25,21 @@ import { toast } from "@/hooks/use-toast"
 import { UserResponse } from "@/lib/response"
 import { ModeToggle } from "@/components/mode-toggle"
 
+/**
+ * Portal page component that handles user registration and sign in
+ * 
+ * This component provides a tabbed interface for user authentication, allowing users to either
+ * sign up for a new account or sign in to an existing one. It includes form validation,
+ * error handling, and success notifications using a toast system.
+ *
+ * The component uses environment variables for API configuration and cookies for session management.
+ * It automatically redirects authenticated users to the dashboard.
+ *
+ * @component
+ * @returns {React.ReactElement} A responsive authentication form with signup and signin tabs
+ */
 export default function Register() {
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams() ?? new URLSearchParams()
   const defaultTab = searchParams.get('tab') || 'signup'
   const [signUpUsername, setSignUpUsername] = useState("")
   const [signUpPassword, setSignUpPassword] = useState("")
@@ -35,6 +48,17 @@ export default function Register() {
   const [signInPassword, setSignInPassword] = useState("")
   const router = useRouter()
 
+  /**
+   * Handles the sign up form submission
+   * 
+   * Validates the form inputs, including username length and password match.
+   * If validation passes, sends a registration request to the API.
+   * On success, sets a user cookie and redirects to dashboard.
+   * On failure, displays an error toast.
+   *
+   * @param {React.FormEvent} e - The form submission event
+   * @returns {Promise<void>}
+   */
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -81,6 +105,16 @@ export default function Register() {
     }
   }
 
+  /**
+   * Handles the sign in form submission
+   * 
+   * Attempts to authenticate the user with provided credentials.
+   * On success, sets a user cookie and redirects to dashboard.
+   * On failure, displays an error toast with invalid credentials message.
+   *
+   * @param {React.FormEvent} e - The form submission event
+   * @returns {Promise<void>}
+   */
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     try {

@@ -1,6 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { connectToMongoDB, getModels } from '@/lib/mongodb';
 
+/**
+ * API handler for managing individual chat conversations.
+ * 
+ * Handles GET requests to fetch chat data and PATCH requests to update chat content.
+ * Chat updates can include adding new messages or modifying existing chat properties.
+ * Returns 405 Method Not Allowed for unsupported HTTP methods.
+ *
+ * @param req - Next.js API request object containing chat ID and update data
+ * @param res - Next.js API response object
+ * @returns JSON response with chat data or error details
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     await connectToMongoDB();
@@ -9,6 +20,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     switch (req.method) {
       case 'GET':
+        /**
+         * Retrieves a specific chat conversation by ID.
+         * Returns 404 if chat is not found.
+         */
         try {
           const chat = await ChatObject.findOne({ id: id });
           if (!chat) {
@@ -21,6 +36,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
       case 'PATCH':
+        /**
+         * Updates a chat conversation, supporting two update patterns:
+         * 1. Appending new messages to the existing message array
+         * 2. Updating other chat properties using direct field updates
+         * Returns 404 if chat is not found.
+         */
         try {
           const updateData = req.body;
           const operation = updateData.messages ? 

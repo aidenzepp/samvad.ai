@@ -2,8 +2,7 @@
 
 import Cookies from "js-cookie";
 import { columns } from "./columns"
-import { ChatSchema, FileSchema } from "@/lib/mongodb"
-import { UUID } from "crypto"
+import { ChatSchema } from "@/lib/mongodb"
 import { DataTable } from "@/components/ui/data-table"
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -21,14 +20,26 @@ import {
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Minus, Upload } from "lucide-react"
+import { Plus, Minus } from "lucide-react"
 import { useState, useEffect } from "react"
 import { toast } from "@/hooks/use-toast"
-import { Separator } from "@/components/ui/separator"
 import { Navbar } from "@/components/ui/navbar"
 import axios from "axios"
 import { useRouter } from "next/navigation";
 
+/**
+ * Form component for creating new chats with file upload capabilities
+ * 
+ * This component provides a dialog interface for users to:
+ * - Select an AI model (GPT-4 or Claude 3.5)
+ * - Upload and process multiple files
+ * - Create a new chat with the selected model and processed files
+ *
+ * @component
+ * @param {Object} props - Component props
+ * @param {() => Promise<void>} props.onSuccess - Callback function to execute after successful chat creation
+ * @returns {React.ReactElement} A dialog form for chat creation
+ */
 function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,6 +47,15 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
+  /**
+   * Handles file upload and processing
+   * 
+   * Processes uploaded files through OCR API and stores results.
+   * Handles loading states and error notifications.
+   *
+   * @param {File[]} files - Array of files to process
+   * @returns {Promise<Array>} Array of processed file data
+   */
   const handleFileUpload = async (files: File[]) => {
     setLoading(true);
     
@@ -64,7 +84,6 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
         });
       }
 
-      // Save processed files to state
       setFiles(prevFiles => [...prevFiles, ...files]);
       
       toast({
@@ -72,7 +91,6 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
         description: "Files processed successfully",
       });
 
-      // Return processed files for chat creation
       return processedFiles;
     } catch (error) {
       toast({
@@ -86,6 +104,14 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
     }
   };
 
+  /**
+   * Handles chat creation with processed files
+   * 
+   * Creates a new chat with selected model and processed files.
+   * Redirects to the new chat page on success.
+   *
+   * @returns {Promise<void>}
+   */
   const handleCreateChat = async () => {
     try {
       const processedFiles = await handleFileUpload(files);
@@ -204,10 +230,30 @@ function ChatCreationForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
   );
 }
 
+/**
+ * Main chats page component that displays and manages user chats
+ * 
+ * This component provides functionality to:
+ * - View all user chats in a data table
+ * - Create new chats via a dialog form
+ * - Select and delete multiple chats
+ * - Handle error states and loading
+ *
+ * @component
+ * @returns {React.ReactElement} A page displaying chat management interface
+ */
 export default function Chats() {
   const [chats, setChats] = useState<ChatSchema[]>([]);
   const [selectedChats, setSelectedChats] = useState<ChatSchema[]>([]);
 
+  /**
+   * Fetches user's chats from the API
+   * 
+   * Retrieves all chats associated with the current user ID.
+   * Updates state with fetched chats and handles errors.
+   *
+   * @returns {Promise<void>}
+   */
   const fetchChats = async () => {
     try {
       const userId = Cookies.get('uid');
@@ -225,6 +271,14 @@ export default function Chats() {
     }
   };
 
+  /**
+   * Handles deletion of selected chats
+   * 
+   * Deletes multiple selected chats and updates the UI.
+   * Shows success/error notifications and refreshes chat list.
+   *
+   * @returns {Promise<void>}
+   */
   const handleRemoveChats = async () => {
     if (selectedChats.length === 0) {
       toast({
@@ -254,6 +308,11 @@ export default function Chats() {
     }
   };
 
+  /**
+   * Updates the selected chats state when rows are selected in the data table
+   *
+   * @param {ChatSchema[]} selectedRows - Array of currently selected chat rows
+   */
   const handleRowSelect = (selectedRows: ChatSchema[]) => {
     setSelectedChats(selectedRows);
   };

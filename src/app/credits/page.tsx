@@ -3,10 +3,26 @@
 import { Navbar } from "@/components/ui/navbar";
 import { useEffect, useState } from "react";
 
+/**
+ * Credits page component that displays contributor information with an animated dot border effect
+ * 
+ * This component creates a visually appealing credits page with contributor names and roles.
+ * It features an animated border made of dots that fade in and out around the page edges.
+ * The border automatically adjusts to window resizing.
+ *
+ * @component
+ * @returns {React.ReactElement} A credits page with animated border and contributor list
+ */
 export default function Credits() {
     const [dots, setDots] = useState<{ x: number; y: number; delay: number }[]>([]);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
+    /**
+     * Effect hook to handle window dimensions and resize events
+     * 
+     * Sets up initial window dimensions and adds a resize event listener to update
+     * dimensions when the window size changes. Cleans up the event listener on unmount.
+     */
     useEffect(() => {
         setDimensions({
             width: window.innerWidth,
@@ -24,6 +40,15 @@ export default function Credits() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    /**
+     * Effect hook to calculate and position the animated border dots
+     * 
+     * Calculates positions for dots around the page border based on current window dimensions.
+     * Creates an array of dot objects with coordinates and animation delays.
+     * Dots are positioned to form a rectangular border with even spacing.
+     * 
+     * @dependency {dimensions} Updates dot positions when window dimensions change
+     */
     useEffect(() => {
         if (dimensions.width === 0 || dimensions.height === 0) return;
 

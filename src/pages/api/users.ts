@@ -3,6 +3,18 @@ import { connectToMongoDB, getModels } from "@/lib/mongodb";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from 'uuid';
 
+/**
+ * API handler for user authentication and registration.
+ * 
+ * Handles POST requests for user registration and login functionality.
+ * Supports two actions:
+ * - register: Creates a new user account with hashed password
+ * - login: Authenticates existing users and returns user data
+ *
+ * @param req - Next.js API request object containing user credentials and action
+ * @param res - Next.js API response object
+ * @returns JSON response with user data or error details
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     await connectToMongoDB();

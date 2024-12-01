@@ -40,7 +40,9 @@ interface TextSegment {
   page?: number;
 }
 
-// Initialize OpenAI client
+/**
+ * Initialize OpenAI client with API key from environment
+ */
 const openaiClient = new OpenAI({
   apiKey: OPENAI_API_KEY
 });
@@ -174,6 +176,13 @@ export async function translateTextWithGoogle(text: string, targetLanguage: stri
   return translation;
 }
 
+/**
+ * Translates text using OpenAI's GPT model with specific translation instructions
+ * 
+ * @param text - Text to translate
+ * @param targetLanguage - Target language to translate into
+ * @returns Promise resolving to translated text
+ */
 export async function translateTextWithOpenAI(text: string, targetLanguage: string): Promise<string> {
   const response = await openaiClient.chat.completions.create({
     model: 'gpt-4-turbo-preview',
@@ -197,6 +206,14 @@ export async function translateTextWithOpenAI(text: string, targetLanguage: stri
   return response.choices[0]?.message.content?.trim() || '';
 }
 
+/**
+ * Refines a Google-translated text using OpenAI's GPT model for more natural results
+ * 
+ * @param googleTranslation - Initial translation from Google Translate
+ * @param originalText - Original source text
+ * @param targetLanguage - Target language for refinement
+ * @returns Promise resolving to refined translation
+ */
 export async function refineTranslationWithOpenAI(googleTranslation: string, originalText: string, targetLanguage: string): Promise<string> {
   const response = await openaiClient.chat.completions.create({
     model: 'gpt-4-turbo-preview',
@@ -225,6 +242,14 @@ interface File {
   type: string;
 }
 
+/**
+ * Processes and translates a document file using a combination of Google Translate and OpenAI
+ * 
+ * @param file - File object to process
+ * @param targetLang - Target language code for translation
+ * @param useGoogleFirst - Whether to use Google Translate before OpenAI refinement (default: true)
+ * @returns Promise resolving to object containing original segments and translated text
+ */
 export async function processAndTranslateDocument(
   file: File, 
   targetLang: string, 

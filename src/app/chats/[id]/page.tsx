@@ -27,11 +27,27 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { useParams } from "next/navigation";
 
+/**
+ * Interface representing a chat message
+ * 
+ * @interface Message
+ * @property {string} message - The content of the message
+ * @property {boolean} is_user - Whether the message was sent by the user (true) or AI (false)
+ */
 interface Message {
   message: string;
   is_user: boolean;
 }
 
+/**
+ * Interface representing an uploaded file with its processed text
+ * 
+ * @interface FileSchema
+ * @property {string} name - The name of the uploaded file
+ * @property {Buffer} data - The binary data of the file
+ * @property {string} [extractedText] - Optional text extracted from the file via OCR
+ * @property {string} [translatedText] - Optional translation of the extracted text
+ */
 interface FileSchema {
   name: string;
   data: Buffer;
@@ -39,6 +55,15 @@ interface FileSchema {
   translatedText?: string;
 }
 
+/**
+ * Props interface for the FileUploadDialog component
+ * 
+ * @interface FileUploadDialogProps
+ * @property {(text: string) => void} setExtractedText - Function to update the extracted text state
+ * @property {(text: string) => void} setTranslatedText - Function to update the translated text state
+ * @property {(files: FileSchema[]) => void} setFiles - Function to update the files array state
+ * @property {FileSchema[]} files - Array of currently uploaded files
+ */
 interface FileUploadDialogProps {
   setExtractedText: (text: string) => void;
   setTranslatedText: (text: string) => void;
@@ -46,6 +71,16 @@ interface FileUploadDialogProps {
   files: FileSchema[];
 }
 
+/**
+ * Dialog component for uploading and processing files
+ * 
+ * @param props - Component props
+ * @param props.setExtractedText - Function to set the extracted text from uploaded files
+ * @param props.setTranslatedText - Function to set the translated text from uploaded files
+ * @param props.setFiles - Function to update the files state
+ * @param props.files - Current array of uploaded files
+ * @returns Dialog component for file upload functionality
+ */
 function FileUploadDialog({ setExtractedText, setTranslatedText, setFiles, files }: FileUploadDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -54,6 +89,11 @@ function FileUploadDialog({ setExtractedText, setTranslatedText, setFiles, files
   const params = useParams<{ id: string }>();
   const chatId = params?.id;
 
+  /**
+   * Handles file upload validation and state update
+   * 
+   * @param files - Array of files to be uploaded
+   */
   const handleFileUpload = async (files: File[]) => {
     const validFiles = files.filter(file => 
       file.type === 'application/pdf' || file.type.startsWith('image/')
@@ -70,6 +110,9 @@ function FileUploadDialog({ setExtractedText, setTranslatedText, setFiles, files
     setUploadFiles(prevFiles => [...prevFiles, ...validFiles]);
   };
 
+  /**
+   * Processes uploaded files and updates both local state and database
+   */
   const handleSubmit = async () => {
     setLoading(true);
     try {
@@ -214,10 +257,27 @@ function FileUploadDialog({ setExtractedText, setTranslatedText, setFiles, files
   );
 }
 
+/**
+ * Interface representing the response structure from chat API endpoints
+ * 
+ * @interface ChatResponse
+ * @property {FileSchema[]} file_group - Array of files associated with the chat, containing document data and processed text
+ */
 interface ChatResponse {
   file_group: FileSchema[];
 }
 
+/**
+ * Main chat interface component
+ * 
+ * Provides functionality for:
+ * - Displaying and managing uploaded files
+ * - Showing extracted and translated text
+ * - Chat interaction with AI assistant
+ * - File deletion
+ * 
+ * @returns Chat interface component
+ */
 export default function Chatting() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [extractedText, setExtractedText] = useState("");
@@ -234,6 +294,9 @@ export default function Chatting() {
   }
 
   useEffect(() => {
+    /**
+     * Loads initial chat data including files and messages
+     */
     const loadChatData = async () => {
       try {
         const response = await axios.get<ChatResponse>(`/api/chats/${params.id}`);
@@ -255,10 +318,18 @@ export default function Chatting() {
     loadChatData();
   }, [params.id]);
 
+  /**
+   * Toggles between showing translated and original text
+   */
   const toggleText = () => {
     setShowTranslated(prev => !prev);
   };
 
+  /**
+   * Handles sending messages to the AI and processing responses
+   * 
+   * @param message - Message text to send
+   */
   const handleSendMessage = async (message: string) => {
     try {
       // First add user message to UI
@@ -316,6 +387,11 @@ export default function Chatting() {
     }
   };
 
+  /**
+   * Handles file deletion and updates both UI and database
+   * 
+   * @param index - Index of file to delete
+   */
   const handleDeleteFile = async (index: number) => {
     try {
       const updatedFiles = files.filter((_, i) => i !== index);
